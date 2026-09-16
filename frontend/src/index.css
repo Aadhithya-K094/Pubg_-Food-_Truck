@@ -1,0 +1,27 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #12151a;
+  color: #fff8ef;
+}
+
+#root {
+  min-height: 100%;
+}
+
+code {
+  font-family: "Fira Code", source-code-pro, Menlo, Consolas, monospace;
+}

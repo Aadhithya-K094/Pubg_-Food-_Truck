@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="1200" height="420" role="img" aria-label="PUBG Food Truck banner">
+  <defs>
+    <linearGradient id="hbBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a303a"/>
+      <stop offset="1" stop-color="#12151a"/>
+    </linearGradient>
+    <radialGradient id="hbGlow" cx="0.2" cy="0.2" r="0.7">
+      <stop offset="0" stop-color="#ffd21e" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#ffd21e" stop-opacity="0"/>
+    </radialGradient>
+    <!-- edge fade so the banner blends into a dark page -->
+    <radialGradient id="hbFade" cx="0.5" cy="0.45" r="0.78">
+      <stop offset="0.35" stop-color="#fff" stop-opacity="1"/>
+      <stop offset="0.72" stop-color="#fff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="hbMask">
+      <rect width="1200" height="420" fill="url(#hbFade)"/>
+    </mask>
+  </defs>
+
+  <rect width="1200" height="420" fill="url(#hbBg)"/>
+  <rect width="1200" height="420" fill="url(#hbGlow)"/>
+
+  <g mask="url(#hbMask)">
+
+  <!-- supply-drop crates, a nod to the theme -->
+  <g opacity="0.16" fill="#ffc107">
+    <rect x="90" y="300" width="54" height="54" rx="6"/>
+    <rect x="1010" y="270" width="70" height="70" rx="8"/>
+  </g>
+
+  <!-- parachute drop -->
+  <g opacity="0.5" transform="translate(940 60)">
+    <path d="M0 40a40 40 0 0 1 80 0z" fill="#ffc107" opacity="0.6"/>
+    <path d="M8 40l32 26M72 40L40 66" stroke="#ffc107" stroke-width="2" opacity="0.7"/>
+    <rect x="32" y="66" width="16" height="14" rx="2" fill="#e2621b"/>
+  </g>
+
+  <!-- truck -->
+  <g transform="translate(150 150)">
+    <rect x="0" y="30" width="240" height="100" rx="12" fill="#fff8ef"/>
+    <rect x="0" y="16" width="240" height="16" rx="8" fill="#e2621b"/>
+    <g fill="#ffc107">
+      <rect x="8" y="16" width="24" height="16"/>
+      <rect x="56" y="16" width="24" height="16"/>
+      <rect x="104" y="16" width="24" height="16"/>
+      <rect x="152" y="16" width="24" height="16"/>
+      <rect x="200" y="16" width="24" height="16"/>
+    </g>
+    <rect x="26" y="48" width="126" height="52" rx="6" fill="#2a303a"/>
+    <rect x="34" y="56" width="110" height="36" rx="4" fill="#48c9d8" opacity="0.45"/>
+    <rect x="20" y="100" width="140" height="8" rx="4" fill="#d9631a"/>
+    <path d="M240 54h42l32 32v44h-74z" fill="#2a303a"/>
+    <rect x="250" y="62" width="36" height="24" rx="4" fill="#cfe6f5" opacity="0.85"/>
+    <circle cx="62" cy="136" r="22" fill="#12151a"/>
+    <circle cx="62" cy="136" r="9" fill="#8a949f"/>
+    <circle cx="266" cy="136" r="22" fill="#12151a"/>
+    <circle cx="266" cy="136" r="9" fill="#8a949f"/>
+  </g>
+
+  </g>
+
+  <text x="560" y="196" font-family="Segoe UI, Roboto, Arial, sans-serif"
+        font-size="54" font-weight="800" letter-spacing="2" fill="#fff8ef">PUBG FOOD TRUCK</text>
+  <text x="562" y="240" font-family="Segoe UI, Roboto, Arial, sans-serif"
+        font-size="22" font-weight="600" letter-spacing="1" fill="#ffd21e">Winner winner, chicken dinner delivered.</text>
+</svg>

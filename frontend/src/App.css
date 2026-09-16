@@ -1,0 +1,902 @@
+/* ============================================================
+   PUBG Food Truck - full-screen, transparent (glass) theme
+   Login uses the front-view truck photo, the dashboard uses the
+   side-view photo. Panels are translucent with a blur so the
+   photo reads through them.
+   ============================================================ */
+
+:root {
+  --pubg-yellow: #ffd21e;
+  --pubg-orange: #f47b20;
+  --pubg-amber: #ffc107;
+  --pubg-red: #e53935;
+  --pubg-charcoal: #1e232b;
+  --pubg-ink: #12151a;
+  --pubg-cream: #fff8ef;
+
+  /* glass tokens */
+  --glass-bg: rgba(18, 21, 26, 0.55);
+  --glass-bg-soft: rgba(30, 35, 43, 0.42);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-blur: 18px;
+  --text-on-glass: #fff8ef;
+  --text-muted: rgba(255, 248, 239, 0.72);
+}
+
+/* ---- full screen shell ---- */
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   Shared full-screen photo background
+   ============================================================ */
+.screen {
+  position: relative;
+  /* 100% not 100vw: 100vw ignores the scrollbar and causes a stray
+     horizontal scrollbar once a vertical one appears. */
+  width: 100%;
+  min-height: 100vh;
+  /* dvh accounts for mobile browser chrome (address bar) which makes
+     100vh overflow on phones. Falls back to the vh line above. */
+  min-height: 100dvh;
+  /* dark base the faded hero blends into */
+  background-color: var(--pubg-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  /* scroll gracefully on short screens instead of clipping */
+  overflow-y: auto;
+}
+
+/* ---- faded hero background layer ----------------------------------
+   The photo lives on its own layer so it can be faded independently
+   of the content: reduced opacity, a soft blur, and an edge mask that
+   feathers it out into the dark base. */
+.screen-bg,
+.dash-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+
+  opacity: var(--hero-opacity, 0.34);
+  filter: blur(2.5px) saturate(0.85) brightness(0.9);
+
+  /* feather the photo out towards the edges */
+  -webkit-mask-image: radial-gradient(
+    ellipse 120% 110% at 50% 45%,
+    rgba(0, 0, 0, 1) 30%,
+    rgba(0, 0, 0, 0.55) 68%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 120% 110% at 50% 45%,
+    rgba(0, 0, 0, 1) 30%,
+    rgba(0, 0, 0, 0.55) 68%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Gentle scrim on top of the faded photo. Much lighter than before,
+   since the image itself is already subdued. */
+.screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(18, 21, 26, 0.45) 0%,
+    rgba(18, 21, 26, 0.15) 45%,
+    rgba(18, 21, 26, 0.55) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.screen > *:not(.screen-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================================
+   Login
+   ============================================================ */
+/* .auth-wrapper is used together with .screen in the markup */
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  /* `auto` margins keep it centred but reachable when taller than the screen */
+  margin: auto;
+  padding: 24px 26px 20px;
+  border-radius: 20px;
+
+  /* transparent glass */
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-border);
+  border-top: 3px solid var(--pubg-yellow);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  color: var(--text-on-glass);
+}
+
+.auth-brand {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.auth-logo {
+  width: 104px;
+  height: auto;
+  display: inline-block;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.6));
+}
+
+.auth-title {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--pubg-yellow);
+  margin-top: 8px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+}
+
+.auth-tagline {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* ---- portal selector ---- */
+.portal-switch {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.portal-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 8px;
+  border: 1.5px solid var(--glass-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.portal-btn .portal-icon {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
+.portal-btn:hover {
+  border-color: rgba(255, 210, 30, 0.6);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.portal-btn.active {
+  border-color: var(--pubg-yellow);
+  background: rgba(255, 210, 30, 0.18);
+  color: var(--pubg-yellow);
+}
+
+.portal-btn.admin.active {
+  border-color: var(--pubg-yellow);
+  background: rgba(255, 210, 30, 0.14);
+  color: var(--pubg-yellow);
+}
+
+.portal-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+/* ---- tabs ---- */
+.auth-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+
+.auth-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.auth-tab.active {
+  background: var(--pubg-yellow);
+  color: var(--pubg-ink);
+  box-shadow: 0 4px 14px rgba(255, 210, 30, 0.35);
+}
+
+/* ---- form ---- */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.auth-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-on-glass);
+}
+
+.auth-optional {
+  font-weight: 400;
+  color: rgba(255, 248, 239, 0.5);
+}
+
+.auth-input {
+  padding: 11px 13px;
+  border: 1.5px solid var(--glass-border);
+  border-radius: 10px;
+  /* 16px minimum: anything smaller makes iOS Safari auto-zoom on focus */
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-on-glass);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.auth-input::placeholder {
+  color: rgba(255, 248, 239, 0.42);
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--pubg-yellow);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0 3px rgba(255, 210, 30, 0.2);
+}
+
+.auth-input.invalid {
+  border-color: #ff6b6b;
+}
+
+.auth-field-error {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ff8a80;
+}
+
+.auth-error {
+  background: rgba(229, 57, 53, 0.22);
+  border: 1px solid rgba(255, 138, 128, 0.5);
+  color: #ffcdd2;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.auth-submit {
+  margin-top: 4px;
+  padding: 13px;
+  border: none;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--pubg-yellow), #f0a800);
+  color: var(--pubg-ink);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.15s ease;
+  box-shadow: 0 8px 22px rgba(255, 210, 30, 0.32);
+}
+
+.auth-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(255, 210, 30, 0.45);
+}
+
+.auth-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-switch {
+  margin-top: 13px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.auth-link {
+  border: none;
+  background: none;
+  color: var(--pubg-yellow);
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-size: 13px;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+/* ============================================================
+   Customer home
+   ============================================================ */
+.home-wrapper {
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+  color: var(--text-on-glass);
+}
+
+.home-panel {
+  width: 100%;
+  max-width: 520px;
+  padding: 32px 26px;
+  border-radius: 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-border);
+  border-top: 3px solid var(--pubg-yellow);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.home-logo {
+  width: 132px;
+  height: auto;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.6));
+}
+
+.home-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--pubg-yellow);
+}
+
+.home-sub {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.home-logout {
+  margin-top: 6px;
+  padding: 11px 26px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--pubg-yellow), #f0a800);
+  color: var(--pubg-ink);
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(255, 210, 30, 0.3);
+}
+
+/* ============================================================
+   Admin dashboard
+   ============================================================ */
+.dash-wrapper {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background-color: var(--pubg-ink);
+  padding: 26px 22px 40px;
+  box-sizing: border-box;
+  position: relative;
+  color: var(--text-on-glass);
+}
+
+/* Dashboard hero sits back a little further than the login one, so the
+   data tables stay easy to read. */
+.dash-bg {
+  --hero-opacity: 0.26;
+}
+
+.dash-wrapper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(18, 21, 26, 0.55) 0%,
+    rgba(18, 21, 26, 0.25) 40%,
+    rgba(18, 21, 26, 0.65) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dash-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.dash-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: var(--glass-bg-soft);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+}
+
+.dash-headline {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dash-logo {
+  width: 66px;
+  height: auto;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
+}
+
+.dash-badge {
+  display: inline-block;
+  background: var(--pubg-yellow);
+  color: var(--pubg-ink);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  padding: 4px 11px;
+  border-radius: 999px;
+}
+
+.dash-title {
+  font-size: 24px;
+  font-weight: 800;
+  margin-top: 7px;
+  color: var(--pubg-yellow);
+}
+
+.dash-sub {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.dash-logout {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--pubg-yellow), #f0a800);
+  color: var(--pubg-ink);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  padding: 18px;
+  border-radius: 15px;
+  background: var(--glass-bg-soft);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-left: 3px solid var(--pubg-yellow);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 27px;
+  font-weight: 800;
+  color: var(--pubg-yellow);
+}
+
+.stat-label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.dash-panel {
+  border-radius: 16px;
+  padding: 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  border: 1px solid var(--glass-border);
+  overflow-x: auto;
+}
+
+.dash-panel-title {
+  font-size: 16.5px;
+  font-weight: 800;
+  margin-bottom: 14px;
+  color: var(--pubg-yellow);
+}
+
+.dash-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  color: var(--text-on-glass);
+}
+
+.dash-table th,
+.dash-table td {
+  text-align: left;
+  padding: 11px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.dash-table th {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+}
+
+.dash-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.role-pill {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.role-pill.admin {
+  background: var(--pubg-yellow);
+  color: var(--pubg-ink);
+}
+
+.role-pill.customer {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--pubg-cream);
+  border: 1px solid var(--glass-border);
+}
+
+.dash-muted {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.dash-error {
+  color: #ff8a80;
+  font-size: 13px;
+}
+
+/* ============================================================
+   RESPONSIVE
+   Breakpoints: 900 (tablet) / 640 (phone landscape + small tablet)
+                480 (phone) / 360 (small phone) / short-landscape
+   ============================================================ */
+
+/* ---- Tablet ---- */
+@media (max-width: 900px) {
+  .dash-wrapper {
+    padding: 20px 16px 32px;
+  }
+  .dash-title {
+    font-size: 21px;
+  }
+  .dash-logo {
+    width: 58px;
+  }
+  .dash-stats {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+  }
+  .stat-value {
+    font-size: 24px;
+  }
+}
+
+/* ---- Phone landscape / small tablet ---- */
+@media (max-width: 640px) {
+  .screen {
+    padding: 16px;
+    align-items: flex-start;
+  }
+  .auth-card {
+    max-width: 100%;
+    padding: 22px 18px 18px;
+    border-radius: 18px;
+  }
+  .auth-logo {
+    width: 92px;
+  }
+  .auth-title {
+    font-size: 18px;
+    letter-spacing: 0.6px;
+  }
+  .home-panel {
+    padding: 26px 20px;
+  }
+  .home-logo {
+    width: 110px;
+  }
+  .home-title {
+    font-size: 22px;
+  }
+
+  .dash-wrapper {
+    padding: 16px 12px 28px;
+  }
+  .dash-header {
+    padding: 14px;
+    gap: 12px;
+  }
+  .dash-logo {
+    width: 48px;
+  }
+  .dash-title {
+    font-size: 19px;
+  }
+  .dash-panel {
+    padding: 16px 14px;
+  }
+  .dash-panel-title {
+    font-size: 15px;
+  }
+
+  /* Stats: 2 across instead of 3 cramped columns */
+  .dash-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* ---- Table -> stacked cards ----------------------------------
+     A 4-column table cannot fit a phone without horizontal scroll,
+     so each row becomes a labelled card. Labels come from the
+     data-label attribute on each cell. */
+  .dash-table thead {
+    display: none;
+  }
+  .dash-table,
+  .dash-table tbody,
+  .dash-table tr,
+  .dash-table td {
+    display: block;
+    width: 100%;
+  }
+  .dash-table tr {
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--glass-border);
+    border-left: 3px solid var(--pubg-yellow);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .dash-table tr:last-child {
+    margin-bottom: 0;
+  }
+  .dash-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    text-align: right;
+    word-break: break-word;
+  }
+  .dash-table td:last-child {
+    border-bottom: none;
+  }
+  .dash-table td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    text-align: left;
+  }
+  /* the "no users yet" row spans normally */
+  .dash-table td[colspan] {
+    justify-content: center;
+    text-align: center;
+  }
+  .dash-table td[colspan]::before {
+    content: none;
+  }
+}
+
+/* ---- Phone ---- */
+@media (max-width: 480px) {
+  .screen {
+    padding: 12px;
+  }
+  .auth-card {
+    padding: 20px 15px 16px;
+    border-radius: 16px;
+  }
+  .auth-logo {
+    width: 84px;
+  }
+  .auth-title {
+    font-size: 17px;
+  }
+  .auth-tagline,
+  .portal-hint {
+    font-size: 11.5px;
+  }
+  .portal-switch {
+    gap: 8px;
+  }
+  .portal-btn {
+    font-size: 12px;
+    padding: 8px 6px;
+  }
+  .portal-btn .portal-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .auth-tab {
+    font-size: 13px;
+  }
+
+  .dash-header {
+    /* stack the header so the logout button is not squeezed */
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dash-logout {
+    width: 100%;
+  }
+  .dash-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stat-card {
+    padding: 14px;
+  }
+  .stat-value {
+    font-size: 22px;
+  }
+  .stat-label {
+    font-size: 10.5px;
+  }
+}
+
+/* ---- Small phone (360px and under) ---- */
+@media (max-width: 360px) {
+  .auth-logo {
+    width: 74px;
+  }
+  .auth-title {
+    font-size: 15.5px;
+  }
+  .portal-btn {
+    font-size: 11px;
+  }
+  .auth-tab {
+    font-size: 12px;
+    padding: 9px 0;
+  }
+  .dash-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Short landscape phones: don't waste height ---- */
+@media (max-height: 520px) and (orientation: landscape) {
+  .screen {
+    align-items: flex-start;
+    padding: 12px;
+  }
+  .auth-brand {
+    margin-bottom: 8px;
+  }
+  .auth-logo {
+    width: 62px;
+  }
+  .auth-title {
+    font-size: 15px;
+    margin-top: 4px;
+  }
+  .auth-tagline {
+    display: none;
+  }
+  .home-logo {
+    width: 80px;
+  }
+}
+
+/* ---- Touch devices ---------------------------------------------
+   `background-attachment: fixed` is unreliable on iOS Safari and
+   causes jank, so pin the hero normally on touch screens. */
+@media (hover: none) {
+  .screen-bg,
+  .dash-bg {
+    background-attachment: scroll;
+    /* blur is expensive on mobile GPUs */
+    filter: saturate(0.85) brightness(0.9);
+  }
+}
+
+/* ---- Respect reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .auth-submit,
+  .portal-btn,
+  .auth-tab,
+  .auth-input {
+    transition: none;
+  }
+  .auth-submit:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Fallback: if the browser cannot blur, darken the panels a bit more
+   so text contrast is preserved. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .auth-card,
+  .home-panel,
+  .dash-panel {
+    background: rgba(18, 21, 26, 0.85);
+  }
+  .dash-header,
+  .stat-card {
+    background: rgba(18, 21, 26, 0.8);
+  }
+}

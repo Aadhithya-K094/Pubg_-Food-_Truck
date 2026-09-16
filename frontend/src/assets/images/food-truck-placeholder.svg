@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" width="400" height="240" role="img" aria-label="Food truck image placeholder">
+  <defs>
+    <linearGradient id="ftSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f3742"/>
+      <stop offset="1" stop-color="#1e232b"/>
+    </linearGradient>
+    <linearGradient id="ftBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff8ef"/>
+      <stop offset="1" stop-color="#efe0cb"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="400" height="240" fill="url(#ftSky)"/>
+  <circle cx="330" cy="52" r="26" fill="#ffc107" opacity="0.18"/>
+
+  <!-- Truck -->
+  <g transform="translate(58 78)">
+    <rect x="0" y="26" width="176" height="76" rx="10" fill="url(#ftBody)"/>
+    <rect x="0" y="14" width="176" height="14" rx="7" fill="#e2621b"/>
+    <!-- awning stripes -->
+    <g fill="#ffc107">
+      <rect x="6" y="14" width="18" height="14"/>
+      <rect x="42" y="14" width="18" height="14"/>
+      <rect x="78" y="14" width="18" height="14"/>
+      <rect x="114" y="14" width="18" height="14"/>
+      <rect x="150" y="14" width="18" height="14"/>
+    </g>
+    <!-- serving window -->
+    <rect x="20" y="40" width="92" height="38" rx="5" fill="#2a303a"/>
+    <rect x="26" y="46" width="80" height="26" rx="3" fill="#48c9d8" opacity="0.5"/>
+    <!-- counter -->
+    <rect x="16" y="78" width="100" height="6" rx="3" fill="#d9631a"/>
+    <!-- cab -->
+    <path d="M176 46h30l24 24v32h-54z" fill="#2a303a"/>
+    <rect x="182" y="52" width="26" height="18" rx="3" fill="#cfe6f5" opacity="0.85"/>
+    <!-- wheels -->
+    <circle cx="46" cy="106" r="17" fill="#12151a"/>
+    <circle cx="46" cy="106" r="7" fill="#8a949f"/>
+    <circle cx="196" cy="106" r="17" fill="#12151a"/>
+    <circle cx="196" cy="106" r="7" fill="#8a949f"/>
+  </g>
+
+  <rect y="196" width="400" height="44" fill="#12151a" opacity="0.55"/>
+  <text x="200" y="223" text-anchor="middle" font-family="Segoe UI, Roboto, Arial, sans-serif"
+        font-size="15" font-weight="700" letter-spacing="1.2" fill="#b6aa96">FOOD TRUCK</text>
+</svg>
