@@ -198,35 +198,35 @@ class RoleAccessTests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
 
     def test_me_requires_authentication(self):
-        res = self.client.get(reverse("me"))
+        res = self.client.get(reverse("profile"))
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_me_returns_profile(self):
         self._auth("cust", "ChickenDinner99")
-        res = self.client.get(reverse("me"))
+        res = self.client.get(reverse("profile"))
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data["username"], "cust")
 
     def test_admin_can_list_users(self):
         self._auth("owner", "TruckOwner99")
-        res = self.client.get(reverse("admin_users"))
+        res = self.client.get(reverse("users"))
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res.data), 2)
 
     def test_customer_forbidden_from_admin_endpoint(self):
         """A valid customer token must still be rejected (403, not 200)."""
         self._auth("cust", "ChickenDinner99")
-        res = self.client.get(reverse("admin_users"))
+        res = self.client.get(reverse("users"))
         self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_anonymous_forbidden_from_admin_endpoint(self):
-        res = self.client.get(reverse("admin_users"))
+        res = self.client.get(reverse("users"))
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_admin_can_create_admin_account(self):
         self._auth("owner", "TruckOwner99")
         res = self.client.post(
-            reverse("admin_users"),
+            reverse("users"),
             {
                 "username": "receiver2",
                 "email": "r2@example.com",

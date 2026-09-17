@@ -45,10 +45,10 @@ body {
   /* 100% not 100vw: 100vw ignores the scrollbar and causes a stray
      horizontal scrollbar once a vertical one appears. */
   width: 100%;
-  min-height: 100vh;
-  /* dvh accounts for mobile browser chrome (address bar) which makes
-     100vh overflow on phones. Falls back to the vh line above. */
-  min-height: 100dvh;
+  /* Lock to the viewport so the PAGE never scrolls (requirement: stable
+     screen). The card scrolls internally if it ever exceeds the height. */
+  height: 100vh;
+  height: 100dvh;
   /* dark base the faded hero blends into */
   background-color: var(--pubg-ink);
   display: flex;
@@ -56,8 +56,7 @@ body {
   justify-content: center;
   padding: 20px;
   box-sizing: border-box;
-  /* scroll gracefully on short screens instead of clipping */
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 /* ---- faded hero background layer ----------------------------------
@@ -109,7 +108,7 @@ body {
   z-index: 0;
 }
 
-.screen > *:not(.screen-bg) {
+.screen > *:not(.screen-bg):not(.toast) {
   position: relative;
   z-index: 1;
 }
@@ -121,9 +120,8 @@ body {
 .auth-card {
   width: 100%;
   max-width: 420px;
-  /* `auto` margins keep it centred but reachable when taller than the screen */
   margin: auto;
-  padding: 24px 26px 20px;
+  padding: 22px 26px 18px;
   border-radius: 20px;
 
   /* transparent glass */
@@ -132,36 +130,229 @@ body {
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
   border: 1px solid var(--glass-border);
   border-top: 3px solid var(--pubg-yellow);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  /* white glow: soft outer halo over a depth shadow */
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 24px rgba(255, 255, 255, 0.28),
+    0 0 60px rgba(255, 255, 255, 0.14),
+    0 24px 70px rgba(0, 0, 0, 0.55);
   color: var(--text-on-glass);
+
+  /* never taller than the viewport; scroll inside the card if needed,
+     so the page itself stays put */
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  /* thin, unobtrusive scrollbar for the rare overflow case */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.auth-card::-webkit-scrollbar {
+  width: 6px;
+}
+.auth-card::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
 }
 
 .auth-brand {
   text-align: center;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+}
+
+/* Circular frame around the logo, with a light backing so the dark-red
+   crest reads clearly against the dark glass card. */
+.auth-logo-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  /* soft light fill behind the logo for contrast */
+  background: radial-gradient(
+    circle at 50% 45%,
+    #fffdf7 0%,
+    #fbf3e4 62%,
+    #f0e2c8 100%
+  );
+  /* the outline: yellow ring + white halo */
+  border: 3px solid var(--pubg-yellow);
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.18),
+    0 6px 20px rgba(0, 0, 0, 0.5);
 }
 
 .auth-logo {
   width: 104px;
-  height: auto;
-  display: inline-block;
-  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.6));
+  height: 104px;
+  object-fit: contain;
+  display: block;
+  /* logo must not be draggable / selectable */
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
 }
 
-.auth-title {
-  font-size: 21px;
+/* Apply the same no-drag rule to every image in the app */
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---- side-popup toast ---- */
+.toast {
+  position: fixed !important;
+  top: 22px !important;
+  right: 22px !important;
+  left: auto !important;
+  bottom: auto !important;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: min(340px, calc(100vw - 32px));
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: rgba(24, 28, 35, 0.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+  color: var(--text-on-glass);
+  animation: toast-in 0.28s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes toast-in {
+  from { transform: translateX(120%); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+.toast-success {
+  border-left: 4px solid #37c46b;
+}
+.toast-error {
+  border-left: 4px solid #ff5a52;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 1px;
+  color: #fff;
+}
+.toast-success .toast-icon {
+  background: #37c46b;
+}
+.toast-error .toast-icon {
+  background: #ff5a52;
+}
+
+.toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.toast-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.toast-msg {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.toast-close:hover {
+  color: var(--text-on-glass);
+}
+
+@media (max-width: 520px) {
+  .toast {
+    /* stay anchored to the top-right, just a touch smaller on phones */
+    top: 12px;
+    right: 12px;
+    left: auto;
+    width: min(300px, calc(100vw - 24px));
+  }
+}
+
+/* Bold condensed uppercase title */
+.auth-title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 2.5px;
   color: var(--pubg-yellow);
-  margin-top: 8px;
+  margin-top: 6px;
   text-transform: uppercase;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 
+/* Fancy highlighted tagline: gradient gold text with a soft glow, on a
+   subtle pill, with breathing room below it. */
 .auth-tagline {
-  font-size: 12.5px;
-  color: var(--text-muted);
-  margin-top: 5px;
+  display: inline-block;
+  font-size: 13px;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  margin-top: 8px;
+  margin-bottom: 16px;
+  padding: 5px 16px;
+  border-radius: 999px;
+
+  background: linear-gradient(90deg, #fff2b0 0%, #ffd21e 45%, #ffb020 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--pubg-yellow); /* fallback */
+
+  text-shadow: 0 0 14px rgba(255, 210, 30, 0.35);
+  position: relative;
+}
+
+/* faint glowing underline flourish under the tagline */
+.auth-tagline::after {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: -3px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 210, 30, 0.7), transparent);
+}
+
+/* Section heading above the form -- normal-case, lighter weight */
+.auth-heading {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--text-on-glass);
+  margin: 2px 0 12px;
 }
 
 /* ---- portal selector ---- */
@@ -174,24 +365,28 @@ body {
 .portal-btn {
   flex: 1;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 5px;
-  padding: 9px 8px;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 8px;
   border: 1.5px solid var(--glass-border);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.07);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.2px;
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.16s ease;
 }
 
 .portal-btn .portal-icon {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   display: block;
+  flex-shrink: 0;
+  color: currentColor;
 }
 
 .portal-btn:hover {
@@ -251,21 +446,74 @@ body {
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 16px;
 }
 
-.auth-label {
+.auth-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-on-glass);
+  gap: 7px;
+  /* breathing room around every field */
+  margin-bottom: 2px;
+}
+
+/* a little extra space before the submit button */
+.auth-form .auth-submit {
+  margin-top: 8px;
+}
+
+/* Uppercase spaced label -- distinct from title and heading */
+.auth-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.auth-label .req {
+  color: var(--pubg-yellow);
+  margin-left: 1px;
 }
 
 .auth-optional {
   font-weight: 400;
   color: rgba(255, 248, 239, 0.5);
+}
+
+/* password input + eye toggle */
+.auth-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-input-wrap .auth-input {
+  width: 100%;
+  padding-right: 44px;
+}
+
+.pw-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.pw-toggle:hover {
+  color: var(--pubg-yellow);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .auth-input {
@@ -295,20 +543,57 @@ body {
   border-color: #ff6b6b;
 }
 
-.auth-field-error {
-  font-size: 12px;
-  font-weight: 500;
-  color: #ff8a80;
+/* Kill the browser's autofill styling (Chrome paints fields white/yellow
+   and darkens the text). Keep our dark glass look and light text instead.
+   The huge inset shadow trick is the only reliable way to override the
+   forced autofill background. */
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus,
+.auth-input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--text-on-glass) !important;
+  caret-color: var(--text-on-glass);
+  -webkit-box-shadow: 0 0 0 1000px rgba(30, 35, 43, 0.92) inset !important;
+  box-shadow: 0 0 0 1000px rgba(30, 35, 43, 0.92) inset !important;
+  border: 1.5px solid var(--glass-border) !important;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
-.auth-error {
+.auth-input:-webkit-autofill:focus {
+  border: 1.5px solid var(--pubg-yellow) !important;
+}
+
+/* Firefox */
+.auth-input:autofill {
+  background: rgba(30, 35, 43, 0.92);
+  color: var(--text-on-glass);
+}
+
+/* per-field error, shown at the bottom of the field */
+.auth-field-error {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #ff8a80;
+  margin-top: 1px;
+  padding-left: 2px;
+}
+
+.auth-field-error::before {
+  content: "⚠ ";
+}
+
+/* top alert summarising validation / server errors */
+.auth-alert {
   background: rgba(229, 57, 53, 0.22);
-  border: 1px solid rgba(255, 138, 128, 0.5);
-  color: #ffcdd2;
+  border: 1px solid rgba(255, 138, 128, 0.55);
+  color: #ffd6d1;
   padding: 10px 12px;
   border-radius: 10px;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 500;
   text-align: center;
+  margin-bottom: 12px;
 }
 
 .auth-submit {

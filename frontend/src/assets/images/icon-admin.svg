@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Admin">
-  <!-- Chef hat: admin / owner portal icon -->
-  <path d="M13 24c-4.4 0-8-3.4-8-7.6C5 12.2 8.6 8.8 13 8.8c.6 0 1.2.06 1.8.2C16.3 6 19.9 4 24 4s7.7 2 9.2 5c.6-.14 1.2-.2 1.8-.2 4.4 0 8 3.4 8 7.6 0 4.2-3.6 7.6-8 7.6z" fill="#fff8ef"/>
-  <rect x="13" y="23" width="22" height="17" rx="3" fill="#f0e6d6"/>
-  <rect x="12" y="33" width="24" height="5" rx="2.5" fill="#e2621b"/>
-  <path d="M20 24v9M24 24v9M28 24v9" stroke="#d6c8b4" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- Professional shield with check: admin / owner -->
+  <path d="M24 4l15 5v11c0 9.4-6.2 17.6-15 20-8.8-2.4-15-10.6-15-20V9z"
+        fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M17 24l5 5 9-10" fill="none" stroke="currentColor" stroke-width="2.6"
+        stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

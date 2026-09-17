@@ -25,9 +25,10 @@ api.interceptors.request.use((config) => {
 export const ROLES = { ADMIN: "admin", CUSTOMER: "customer" };
 
 // Public sign-up always creates a customer account (enforced server-side).
+// Does NOT log the user in: no session/tokens are stored, so the user
+// must enter their credentials manually on the login form afterwards.
 export async function register(payload) {
   const { data } = await api.post("/auth/register/", payload);
-  persistSession(data);
   return data;
 }
 
@@ -50,7 +51,7 @@ export function isAdmin() {
 
 // Admin-only: list users (optionally filtered by role).
 export async function listUsers(role) {
-  const { data } = await api.get("/auth/admin/users/", {
+  const { data } = await api.get("/users/", {
     params: role ? { role } : undefined,
   });
   return data;
@@ -58,7 +59,7 @@ export async function listUsers(role) {
 
 // Admin-only: create an admin or customer account.
 export async function adminCreateUser(payload) {
-  const { data } = await api.post("/auth/admin/users/", payload);
+  const { data } = await api.post("/users/", payload);
   return data;
 }
 

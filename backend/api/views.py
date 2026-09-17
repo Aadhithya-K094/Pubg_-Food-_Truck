@@ -117,7 +117,7 @@ class LoginView(APIView):
 
 
 class MeView(APIView):
-    """GET /api/auth/me/ — return the authenticated user's profile + role."""
+    """GET /api/auth/profile/ — return the authenticated user's profile + role."""
 
     permission_classes = [IsAuthenticated]
 
@@ -128,8 +128,8 @@ class MeView(APIView):
 class AdminUserListCreateView(APIView):
     """
     Admin-only user management.
-      GET  /api/auth/admin/users/  -> list all users
-      POST /api/auth/admin/users/  -> create an admin or customer account
+      GET  /api/users/  -> list all users
+      POST /api/users/  -> create an admin or customer account
     """
 
     permission_classes = [IsAdminRole]
