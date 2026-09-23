@@ -11,6 +11,8 @@ Security:
     management command — a client cannot escalate itself to admin.
 """
 
+import re
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
@@ -18,6 +20,45 @@ from rest_framework import serializers
 from .models import Role
 
 User = get_user_model()
+
+# Shared field rules -- MUST match the frontend so a bypassed UI cannot
+# smuggle invalid data past the API.
+# A NEW account username is letters and numbers ONLY (no special characters,
+# not even '@'). The login field is separate and still accepts emails.
+USERNAME_RE = re.compile(r"^[a-zA-Z0-9]{3,30}$")
+PHONE_RE = re.compile(r"^[6-9][0-9]{9}$")
+
+
+def validate_username_value(value):
+    """New-account username: letters and numbers only, 3-30 chars.
+
+    No special characters are allowed (including '@'); the login form has its
+    own separate rules that accept an email address instead.
+    """
+    v = (value or "").strip()
+    if not v:
+        raise serializers.ValidationError("Username is required.")
+    if re.search(r"[^a-zA-Z0-9]", v):
+        raise serializers.ValidationError(
+            "Only letters and numbers are allowed."
+        )
+    if not USERNAME_RE.match(v):
+        raise serializers.ValidationError(
+            "Username must be 3 to 30 characters (letters and numbers only)."
+        )
+    return v
+
+
+def validate_phone_value(value):
+    """Optional; if given must be 10 digits starting 6-9."""
+    v = (value or "").strip()
+    if not v:
+        return v
+    if not PHONE_RE.match(v):
+        raise serializers.ValidationError(
+            "Enter a valid 10-digit mobile number starting with 6, 7, 8 or 9."
+        )
+    return v
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -65,6 +106,12 @@ class RegisterSerializer(serializers.ModelSerializer):
             "password2",
         ]
 
+    def validate_username(self, value):
+        return validate_username_value(value)
+
+    def validate_phone(self, value):
+        return validate_phone_value(value)
+
     def validate(self, attrs):
         if attrs["password"] != attrs["password2"]:
             raise serializers.ValidationError(
@@ -101,6 +148,12 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["username", "email", "full_name", "phone", "role", "password"]
+
+    def validate_username(self, value):
+        return validate_username_value(value)
+
+    def validate_phone(self, value):
+        return validate_phone_value(value)
 
     def validate_password(self, value):
         validate_password(value)

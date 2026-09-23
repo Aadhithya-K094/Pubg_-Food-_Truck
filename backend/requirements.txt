@@ -23,3 +23,8 @@ Pillow==11.0.0
 
 # Production WSGI server (optional, for deployment)
 gunicorn==23.0.0
+
+# Google OAuth (verify the ID token from "Sign in with Google")
+google-auth==2.37.0
+# HTTP transport used by google-auth to fetch Google's signing certs
+requests==2.32.3

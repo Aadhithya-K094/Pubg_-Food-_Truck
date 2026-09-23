@@ -79,6 +79,55 @@ class RegistrationTests(APITestCase):
         )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_username_with_special_characters_rejected(self):
+        """Server must reject special chars even if the UI is bypassed."""
+        res = self.client.post(
+            reverse("register"),
+            {
+                "username": "bad@user!",
+                "email": "sp@example.com",
+                "full_name": "Sp User",
+                "phone": "9876543210",
+                "password": "ChickenDinner99",
+                "password2": "ChickenDinner99",
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("username", res.data)
+
+    def test_phone_not_starting_6_to_9_rejected(self):
+        res = self.client.post(
+            reverse("register"),
+            {
+                "username": "phoneuser",
+                "email": "ph@example.com",
+                "full_name": "Ph User",
+                "phone": "5123456789",
+                "password": "ChickenDinner99",
+                "password2": "ChickenDinner99",
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("phone", res.data)
+
+    def test_valid_phone_starting_9_accepted(self):
+        res = self.client.post(
+            reverse("register"),
+            {
+                "username": "phoneok",
+                "email": "phok@example.com",
+                "full_name": "Ph Ok",
+                "phone": "9123456789",
+                "password": "ChickenDinner99",
+                "password2": "ChickenDinner99",
+            },
+            format="json",
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data["user"]["role"], "customer")
+
     def test_duplicate_username_rejected(self):
         User.objects.create_user("dupe", "dupe@example.com", "ChickenDinner99")
         res = self.client.post(

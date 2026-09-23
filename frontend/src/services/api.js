@@ -11,11 +11,26 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// Attach the stored access token to every request.
+// Public auth endpoints must NOT carry a (possibly stale) Authorization
+// header, or the backend's JWT auth rejects the request before the view
+// runs ("Given token not valid for any token type").
+const PUBLIC_PATHS = [
+  "/auth/login/",
+  "/auth/register/",
+  "/auth/google/",
+  "/auth/refresh-token/",
+];
+
+// Attach the stored access token to every request EXCEPT public auth calls.
 api.interceptors.request.use((config) => {
+  const url = config.url || "";
+  const isPublic = PUBLIC_PATHS.some((p) => url.includes(p));
   const token = localStorage.getItem("access_token");
-  if (token) {
+  if (token && !isPublic) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    // ensure no stale header leaks onto public calls
+    if (config.headers) delete config.headers.Authorization;
   }
   return config;
 });
@@ -41,6 +56,13 @@ export async function login({ username, password, expectedRole }) {
   return data;
 }
 
+// OAuth: exchange a Google ID token (credential) for our own JWT session.
+export async function googleLogin(credential) {
+  const { data } = await api.post("/auth/google/", { credential });
+  persistSession(data);
+  return data;
+}
+
 export function getRole() {
   return getCurrentUser()?.role || null;
 }
@@ -60,6 +82,67 @@ export async function listUsers(role) {
 // Admin-only: create an admin or customer account.
 export async function adminCreateUser(payload) {
   const { data } = await api.post("/users/", payload);
+  return data;
+}
+
+// ---- Menu ----
+export async function getMenu(service) {
+  const { data } = await api.get("/menu/", {
+    params: service ? { service } : undefined,
+  });
+  return data;
+}
+
+// ---- Orders (customer) ----
+export async function placeOrder(payload) {
+  const { data } = await api.post("/orders/", payload);
+  return data;
+}
+
+export async function getMyOrders() {
+  const { data } = await api.get("/orders/mine/");
+  return data;
+}
+
+// ---- Reviews ----
+export async function getReviews(menuItemId) {
+  const { data } = await api.get("/reviews/", {
+    params: menuItemId ? { menu_item: menuItemId } : undefined,
+  });
+  return data;
+}
+
+export async function createReview(payload) {
+  const { data } = await api.post("/reviews/", payload);
+  return data;
+}
+
+// ---- Admin: orders + dashboard + logs ----
+export async function getAdminOrders({ service, status } = {}) {
+  const params = {};
+  if (service) params.service = service;
+  if (status) params.status = status;
+  const { data } = await api.get("/admin/orders/", { params });
+  return data;
+}
+
+export async function adminOrderAction(orderId, body) {
+  const { data } = await api.post(`/admin/orders/${orderId}/action/`, body);
+  return data;
+}
+
+export async function getDashboard() {
+  const { data } = await api.get("/admin/dashboard/");
+  return data;
+}
+
+export async function getCustomerLog() {
+  const { data } = await api.get("/admin/logs/customer/");
+  return data;
+}
+
+export async function getStatusLog() {
+  const { data } = await api.get("/admin/logs/status/");
   return data;
 }
 

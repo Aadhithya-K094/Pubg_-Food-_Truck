@@ -1,14 +1,21 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { login, register, ROLES } from "../services/api";
+import { login, register, googleLogin, ROLES } from "../services/api";
 import logo from "../assets/images/logo.png";
 import loginBg from "../assets/images/login-bg.jpg";
 
+const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || "";
+
 // Email must look like example000@gmail.com style addresses.
 const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-const USERNAME_RE = /^[a-zA-Z0-9._]{3,20}$/;
-const PHONE_RE = /^[0-9]{10}$/;
+// NEW-account username: letters and numbers ONLY (no special characters). 3-30 chars.
+const USERNAME_RE = /^[a-zA-Z0-9]{3,30}$/;
+// Any character other than a letter or digit is a forbidden special char
+// for a new-account username (this includes '@').
+const USERNAME_SPECIAL_RE = /[^a-zA-Z0-9]/;
+// Indian mobile: exactly 10 digits, must start with 6, 7, 8 or 9.
+const PHONE_RE = /^[6-9][0-9]{9}$/;
 
 // --- inline professional icons (inherit text colour) -----------------
 function CustomerIcon() {
@@ -61,8 +68,14 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [showPw2, setShowPw2] = useState(false);
+  // The photo background stays blank until the user focuses the username
+  // field, then fades in slowly (~2s).
+  const [bgVisible, setBgVisible] = useState(false);
   const formRef = useRef(null);
   const toastTimer = useRef(null);
+  const googleBtnRef = useRef(null);
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
 
   // Side-popup toast helper. Auto-dismisses after a few seconds.
   function showToast(type, title, message) {
@@ -70,6 +83,43 @@ export default function Login() {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 4500);
   }
+
+  // Initialise "Sign in with Google" once the GIS script has loaded.
+  // Renders the official Google button into googleBtnRef.
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return; // not configured -> button hidden
+    const g = window.google;
+    if (!g?.accounts?.id || !googleBtnRef.current) return;
+
+    async function handleCredential(resp) {
+      try {
+        const data = await googleLogin(resp.credential);
+        navigateRef.current(data?.user?.role === ROLES.ADMIN ? "/admin" : "/", {
+          replace: true,
+        });
+      } catch (err) {
+        const d = err?.response?.data;
+        showToast(
+          "error",
+          "Google sign-in failed",
+          d?.detail || "Could not sign in with Google. Please try again."
+        );
+      }
+    }
+
+    g.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredential,
+    });
+    googleBtnRef.current.innerHTML = "";
+    g.accounts.id.renderButton(googleBtnRef.current, {
+      theme: "filled_black",
+      size: "large",
+      shape: "pill",
+      text: "signin_with",
+      width: 300,
+    });
+  }, [portal, mode]);
 
   // Prevent the browser from leaving saved/autofilled credentials in the
   // fields when the page is freshly opened. Autofill can fire a moment
@@ -108,7 +158,22 @@ export default function Login() {
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
-    setErrors((e) => ({ ...e, [field]: undefined }));
+    // Live feedback for constrained fields.
+    // NOTE: the "username" field only forbids special characters when
+    // CREATING an account. On login it accepts username OR email, so the
+    // '@' and '.' in an email must be allowed there.
+    let liveError;
+    if (
+      field === "username" &&
+      value &&
+      isRegister &&
+      USERNAME_SPECIAL_RE.test(value)
+    ) {
+      liveError = "Only letters and numbers are allowed.";
+    } else if (field === "phone" && value && !/^[6-9]/.test(value)) {
+      liveError = "Mobile number must start with 6, 7, 8 or 9.";
+    }
+    setErrors((e) => ({ ...e, [field]: liveError }));
   }
 
   function switchPortal(nextPortal) {
@@ -116,6 +181,11 @@ export default function Login() {
     setMode("login");
     setErrors({});
     setToast(null);
+    // Keep Customer and Admin logins separate: clear whatever was typed so
+    // customer-entered credentials never appear in the admin fields.
+    clearAllFields();
+    setShowPw(false);
+    setShowPw2(false);
   }
 
   // Full validation covering every negative scenario. All fields mandatory.
@@ -126,12 +196,27 @@ export default function Login() {
     const fn = form.full_name.trim();
     const ph = form.phone.trim();
 
-    // Username (required on every form)
-    if (!u) next.username = "Username is required.";
-    else if (u.length < 3) next.username = "Username must be at least 3 characters.";
-    else if (u.length > 20) next.username = "Username must be 20 characters or fewer.";
-    else if (!USERNAME_RE.test(u))
-      next.username = "Use only letters, numbers, dot or underscore.";
+    if (isRegister) {
+      // Creating an account: letters and numbers only (no special characters).
+      if (!u) next.username = "Username is required.";
+      else if (USERNAME_SPECIAL_RE.test(u))
+        next.username = "Only letters and numbers are allowed.";
+      else if (u.length < 3) next.username = "Username must be at least 3 characters.";
+      else if (u.length > 30) next.username = "Username must be 30 characters or fewer.";
+      else if (!USERNAME_RE.test(u)) next.username = "Only letters and numbers are allowed.";
+    } else {
+      // Logging in: accept EITHER a username OR an email address.
+      if (!u) {
+        next.username = "Username or email is required.";
+      } else if (u.includes("@")) {
+        // treat as email -> must be a valid email format
+        if (!EMAIL_RE.test(u)) next.username = "Enter a valid email address.";
+      } else {
+        // treat as username -> letters/numbers only
+        if (USERNAME_SPECIAL_RE.test(u))
+          next.username = "Enter a valid username or email.";
+      }
+    }
 
     // Password (required on every form)
     if (!form.password) next.password = "Password is required.";
@@ -150,8 +235,12 @@ export default function Login() {
       if (!fn) next.full_name = "Full name is required.";
       else if (fn.length < 2) next.full_name = "Enter your full name.";
 
-      // Phone (now mandatory, 10 digits)
+      // Phone (mandatory, 10 digits, must start 6-9)
       if (!ph) next.phone = "Mobile number is required.";
+      else if (ph.length !== 10)
+        next.phone = "Mobile number must be exactly 10 digits.";
+      else if (!/^[6-9]/.test(ph))
+        next.phone = "Mobile number must start with 6, 7, 8 or 9.";
       else if (!PHONE_RE.test(ph))
         next.phone = "Enter a valid 10-digit mobile number.";
 
@@ -242,8 +331,16 @@ export default function Login() {
         if (Object.keys(mapped).length) setErrors((e2) => ({ ...e2, ...mapped }));
         const detail = d.detail || Object.values(mapped)[0];
         showToast("error", "Login failed", detail || "Something went wrong. Please try again.");
+      } else if (!err?.response) {
+        // No response at all => the request never reached the backend, i.e.
+        // the API server isn't running (or is unreachable).
+        showToast(
+          "error",
+          "Server not running",
+          "Can't reach the API server on port 8000. Start the backend, then try again."
+        );
       } else {
-        showToast("error", "Connection error", "Unable to reach the server. Please try again.");
+        showToast("error", "Connection error", "Something went wrong. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -253,7 +350,7 @@ export default function Login() {
   return (
     <div className="screen auth-wrapper">
       <div
-        className="screen-bg"
+        className={`screen-bg ${bgVisible ? "revealed" : ""}`}
         style={{ backgroundImage: `url(${loginBg})` }}
         aria-hidden="true"
       />
@@ -279,7 +376,7 @@ export default function Login() {
         </div>
       )}
 
-      <div className="auth-card">
+      <div className={`auth-card ${isRegister ? "is-register" : ""}`}>
         <div className="auth-brand">
           <span className="auth-logo-ring">
             <img
@@ -331,7 +428,8 @@ export default function Login() {
         >
           <div className="auth-field">
             <label className="auth-label" htmlFor="f-username">
-              Username <span className="req">*</span>
+              {isRegister ? "Username" : "Username or Email"}{" "}
+              <span className="req">*</span>
             </label>
             <input
               id="f-username"
@@ -339,9 +437,23 @@ export default function Login() {
               className={`auth-input ${errors.username ? "invalid" : ""}`}
               type="text"
               autoComplete="off"
+              onFocus={() => setBgVisible(true)}
               value={form.username}
-              onChange={(e) => update("username", e.target.value)}
-              placeholder="Enter your username"
+              onChange={(e) =>
+                update(
+                  "username",
+                  // While creating an account, silently drop any special
+                  // characters so the field only ever holds letters/numbers.
+                  isRegister
+                    ? e.target.value.replace(/[^a-zA-Z0-9]/g, "")
+                    : e.target.value
+                )
+              }
+              placeholder={
+                isRegister
+                  ? "Enter your username"
+                  : "Enter your username or email"
+              }
               aria-invalid={!!errors.username}
             />
             {errors.username && <span className="auth-field-error">{errors.username}</span>}
@@ -420,6 +532,13 @@ export default function Login() {
                 className={`auth-input ${errors.password ? "invalid" : ""}`}
                 type={showPw ? "text" : "password"}
                 autoComplete="new-password"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                data-form-type="other"
+                data-lpignore="true"
+                readOnly
+                onFocus={(e) => e.target.removeAttribute("readonly")}
                 value={form.password}
                 onChange={(e) => update("password", e.target.value)}
                 placeholder="Enter your password"
@@ -449,6 +568,13 @@ export default function Login() {
                   className={`auth-input ${errors.password2 ? "invalid" : ""}`}
                   type={showPw2 ? "text" : "password"}
                   autoComplete="new-password"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                  data-form-type="other"
+                  data-lpignore="true"
+                  readOnly
+                  onFocus={(e) => e.target.removeAttribute("readonly")}
                   value={form.password2}
                   onChange={(e) => update("password2", e.target.value)}
                   placeholder="Re-enter your password"
@@ -479,6 +605,16 @@ export default function Login() {
               : "Login"}
           </button>
         </form>
+
+        {/* OAuth: Sign in with Google (Customer portal only, when configured) */}
+        {!isAdminPortal && GOOGLE_CLIENT_ID && (
+          <>
+            <div className="auth-divider">
+              <span>or</span>
+            </div>
+            <div className="google-btn-wrap" ref={googleBtnRef} />
+          </>
+        )}
 
         {isAdminPortal ? (
           <p className="auth-switch">Admin accounts are set up by the owner.</p>

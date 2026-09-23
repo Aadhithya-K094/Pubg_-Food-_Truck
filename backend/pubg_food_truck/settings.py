@@ -124,8 +124,12 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    # Requirement: a token must expire within a maximum of 1 hour.
+    # The access token IS the credential sent on every request, capped at 1h.
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    # Keep the whole session within the 1-hour ceiling too, so it cannot be
+    # silently extended past an hour via refresh.
+    "REFRESH_TOKEN_LIFETIME": timedelta(hours=1),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": False,
     "AUTH_HEADER_TYPES": ("Bearer",),
@@ -140,6 +144,15 @@ CORS_ALLOWED_ORIGINS = os.getenv(
 ).split(",")
 
 CORS_ALLOW_CREDENTIALS = True
+
+# ------------------------------------------------------------------
+# Google OAuth ("Sign in with Google")
+# ------------------------------------------------------------------
+# Create an OAuth 2.0 Client ID (type: Web application) at
+# https://console.cloud.google.com/apis/credentials and paste it into
+# backend/.env as GOOGLE_OAUTH_CLIENT_ID. The same value must go into the
+# frontend as REACT_APP_GOOGLE_CLIENT_ID.
+GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "")
 
 # ------------------------------------------------------------------
 # Internationalization

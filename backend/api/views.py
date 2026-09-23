@@ -10,6 +10,9 @@ Login uses Django's `authenticate` (constant-time hash comparison) and
 issues JWT access/refresh tokens on success.
 """
 
+import os
+import secrets
+
 from django.contrib.auth import authenticate, get_user_model
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -78,14 +81,26 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user = authenticate(
-            request,
-            username=serializer.validated_data["username"],
-            password=serializer.validated_data["password"],
-        )
+        identifier = serializer.validated_data["username"].strip()
+        password = serializer.validated_data["password"]
+
+        # Accept EITHER a username or an email address. If the identifier
+        # looks like / matches an email, resolve it to the real username
+        # before authenticating (authenticate() only matches USERNAME_FIELD).
+        lookup_username = identifier
+        if "@" in identifier:
+            match = User.objects.filter(email__iexact=identifier).first()
+            if match:
+                lookup_username = match.username
+        else:
+            # also allow the case where someone typed an email that is
+            # stored but doesn't contain '@' check (defensive no-op)
+            pass
+
+        user = authenticate(request, username=lookup_username, password=password)
 
         if user is None:
-            # Generic message: don't reveal whether the username exists.
+            # Generic message: don't reveal whether the account exists.
             return Response(
                 {"detail": "Invalid credentials."},
                 status=status.HTTP_401_UNAUTHORIZED,
@@ -111,6 +126,95 @@ class LoginView(APIView):
                 "user": UserSerializer(user).data,
                 "tokens": _tokens_for(user),
                 "message": "Login successful.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class GoogleLoginView(APIView):
+    """
+    POST /api/auth/google/
+    OAuth "Sign in with Google". The client sends the Google ID token
+    (a `credential` string from Google Identity Services). We verify it
+    against Google, then find-or-create a CUSTOMER account and issue our
+    own JWT — exactly the same token shape as password login.
+
+    Requires GOOGLE_OAUTH_CLIENT_ID in the environment (backend/.env).
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get("credential") or request.data.get("id_token")
+        if not token:
+            return Response(
+                {"detail": "Missing Google credential."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        client_id = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "").strip()
+        if not client_id:
+            return Response(
+                {"detail": "Google sign-in is not configured on the server."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        # Verify the ID token with Google (checks signature, audience, expiry).
+        try:
+            from google.auth.transport import requests as google_requests
+            from google.oauth2 import id_token as google_id_token
+
+            info = google_id_token.verify_oauth2_token(
+                token, google_requests.Request(), client_id
+            )
+        except ValueError:
+            return Response(
+                {"detail": "Invalid or expired Google credential."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not info.get("email_verified"):
+            return Response(
+                {"detail": "Your Google email is not verified."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        email = info.get("email", "").lower()
+        if not email:
+            return Response(
+                {"detail": "Google account has no email."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Find-or-create the account by email. New Google users are customers.
+        user = User.objects.filter(email__iexact=email).first()
+        if user is None:
+            base = email.split("@")[0]
+            username = "".join(ch for ch in base if ch.isalnum())[:20] or "user"
+            # ensure uniqueness
+            while User.objects.filter(username__iexact=username).exists():
+                username = (username[:14] + secrets.token_hex(3))[:20]
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=None,  # unusable password: Google is the only way in
+                role=Role.CUSTOMER,
+                full_name=info.get("name") or "",
+            )
+            user.set_unusable_password()
+            user.save(update_fields=["password"])
+
+        if not user.is_active:
+            return Response(
+                {"detail": "This account is disabled."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        return Response(
+            {
+                "user": UserSerializer(user).data,
+                "tokens": _tokens_for(user),
+                "message": "Signed in with Google.",
             },
             status=status.HTTP_200_OK,
         )

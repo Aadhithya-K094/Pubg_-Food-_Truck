@@ -94,3 +94,50 @@ class UserAdmin(BaseUserAdmin):
     # auto_now / auto_now_add fields are not editable
     readonly_fields = ("last_login", "date_joined", "created_at", "updated_at")
     filter_horizontal = ("groups", "user_permissions")
+
+
+from .models import (  # noqa: E402
+    MenuItem,
+    Order,
+    OrderItem,
+    Review,
+    CustomerOrderLog,
+    AdminOrderStatusLog,
+)
+
+
+@admin.register(MenuItem)
+class MenuItemAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "category", "price", "discount_percent", "final_price", "is_available")
+    list_filter = ("category", "is_available")
+    search_fields = ("name", "category")
+
+
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ("id", "customer", "service_type", "status", "payment_status", "total_amount", "created_at")
+    list_filter = ("service_type", "status", "payment_status")
+    search_fields = ("customer__username", "customer__email")
+    inlines = [OrderItemInline]
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = ("id", "customer", "menu_item", "rating", "is_published", "created_at")
+    list_filter = ("rating", "is_published")
+
+
+@admin.register(CustomerOrderLog)
+class CustomerOrderLogAdmin(admin.ModelAdmin):
+    list_display = ("id", "order", "customer", "event", "created_at")
+    search_fields = ("event",)
+
+
+@admin.register(AdminOrderStatusLog)
+class AdminOrderStatusLogAdmin(admin.ModelAdmin):
+    list_display = ("id", "order", "admin", "from_status", "to_status", "created_at")
