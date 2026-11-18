@@ -39,9 +39,9 @@ CREATE TABLE `admin_order_status_logs` (
   `admin_id` bigint DEFAULT NULL,
   `order_id` bigint NOT NULL,
   PRIMARY KEY (`id`),
-  KEY `admin_order_status_logs_admin_id_fb102e65_fk_users_id` (`admin_id`),
   KEY `admin_order_status_logs_order_id_61465123_fk_orders_id` (`order_id`),
-  CONSTRAINT `admin_order_status_logs_admin_id_fb102e65_fk_users_id` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`),
+  KEY `admin_order_status_logs_admin_id_fb102e65_fk_admin_users_id` (`admin_id`),
+  CONSTRAINT `admin_order_status_logs_admin_id_fb102e65_fk_admin_users_id` FOREIGN KEY (`admin_id`) REFERENCES `admin_users` (`id`),
   CONSTRAINT `admin_order_status_logs_order_id_61465123_fk_orders_id` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -53,6 +53,40 @@ CREATE TABLE `admin_order_status_logs` (
 LOCK TABLES `admin_order_status_logs` WRITE;
 /*!40000 ALTER TABLE `admin_order_status_logs` DISABLE KEYS */;
 /*!40000 ALTER TABLE `admin_order_status_logs` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `admin_users`
+--
+
+DROP TABLE IF EXISTS `admin_users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `admin_users` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `password` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `last_login` datetime(6) DEFAULT NULL,
+  `username` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(254) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `full_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `phone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL,
+  `created_at` datetime(6) NOT NULL,
+  `updated_at` datetime(6) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `username` (`username`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `admin_users`
+--
+
+LOCK TABLES `admin_users` WRITE;
+/*!40000 ALTER TABLE `admin_users` DISABLE KEYS */;
+INSERT INTO `admin_users` VALUES (1,'pbkdf2_sha256$870000$IO46iHpR5hDaUM3uC7zoYg$Kzv060Qu3uj2pSSCLiQ239Lhajycn4uPI0z6aSFoan4=','2026-11-18 12:08:44.321833','Aadhithya094','Admin094@gmail.com','Aadhithya K','7603936963',1,'2026-11-18 09:58:30.937859','2026-11-18 10:00:25.142912');
+/*!40000 ALTER TABLE `admin_users` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -122,7 +156,7 @@ CREATE TABLE `auth_permission` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `auth_permission_content_type_id_codename_01ab375a_uniq` (`content_type_id`,`codename`),
   CONSTRAINT `auth_permission_content_type_id_2f476e4b_fk_django_co` FOREIGN KEY (`content_type_id`) REFERENCES `django_content_type` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -131,7 +165,7 @@ CREATE TABLE `auth_permission` (
 
 LOCK TABLES `auth_permission` WRITE;
 /*!40000 ALTER TABLE `auth_permission` DISABLE KEYS */;
-INSERT INTO `auth_permission` VALUES (1,'Can add log entry',1,'add_logentry'),(2,'Can change log entry',1,'change_logentry'),(3,'Can delete log entry',1,'delete_logentry'),(4,'Can view log entry',1,'view_logentry'),(5,'Can add permission',2,'add_permission'),(6,'Can change permission',2,'change_permission'),(7,'Can delete permission',2,'delete_permission'),(8,'Can view permission',2,'view_permission'),(9,'Can add group',3,'add_group'),(10,'Can change group',3,'change_group'),(11,'Can delete group',3,'delete_group'),(12,'Can view group',3,'view_group'),(13,'Can add content type',4,'add_contenttype'),(14,'Can change content type',4,'change_contenttype'),(15,'Can delete content type',4,'delete_contenttype'),(16,'Can view content type',4,'view_contenttype'),(17,'Can add session',5,'add_session'),(18,'Can change session',5,'change_session'),(19,'Can delete session',5,'delete_session'),(20,'Can view session',5,'view_session'),(21,'Can add user',6,'add_user'),(22,'Can change user',6,'change_user'),(23,'Can delete user',6,'delete_user'),(24,'Can view user',6,'view_user'),(25,'Can add menu item',7,'add_menuitem'),(26,'Can change menu item',7,'change_menuitem'),(27,'Can delete menu item',7,'delete_menuitem'),(28,'Can view menu item',7,'view_menuitem'),(29,'Can add order',8,'add_order'),(30,'Can change order',8,'change_order'),(31,'Can delete order',8,'delete_order'),(32,'Can view order',8,'view_order'),(33,'Can add customer order log',9,'add_customerorderlog'),(34,'Can change customer order log',9,'change_customerorderlog'),(35,'Can delete customer order log',9,'delete_customerorderlog'),(36,'Can view customer order log',9,'view_customerorderlog'),(37,'Can add admin order status log',10,'add_adminorderstatuslog'),(38,'Can change admin order status log',10,'change_adminorderstatuslog'),(39,'Can delete admin order status log',10,'delete_adminorderstatuslog'),(40,'Can view admin order status log',10,'view_adminorderstatuslog'),(41,'Can add order item',11,'add_orderitem'),(42,'Can change order item',11,'change_orderitem'),(43,'Can delete order item',11,'delete_orderitem'),(44,'Can view order item',11,'view_orderitem'),(45,'Can add review',12,'add_review'),(46,'Can change review',12,'change_review'),(47,'Can delete review',12,'delete_review'),(48,'Can view review',12,'view_review');
+INSERT INTO `auth_permission` VALUES (1,'Can add log entry',1,'add_logentry'),(2,'Can change log entry',1,'change_logentry'),(3,'Can delete log entry',1,'delete_logentry'),(4,'Can view log entry',1,'view_logentry'),(5,'Can add permission',2,'add_permission'),(6,'Can change permission',2,'change_permission'),(7,'Can delete permission',2,'delete_permission'),(8,'Can view permission',2,'view_permission'),(9,'Can add group',3,'add_group'),(10,'Can change group',3,'change_group'),(11,'Can delete group',3,'delete_group'),(12,'Can view group',3,'view_group'),(13,'Can add content type',4,'add_contenttype'),(14,'Can change content type',4,'change_contenttype'),(15,'Can delete content type',4,'delete_contenttype'),(16,'Can view content type',4,'view_contenttype'),(17,'Can add session',5,'add_session'),(18,'Can change session',5,'change_session'),(19,'Can delete session',5,'delete_session'),(20,'Can view session',5,'view_session'),(21,'Can add user',6,'add_user'),(22,'Can change user',6,'change_user'),(23,'Can delete user',6,'delete_user'),(24,'Can view user',6,'view_user'),(25,'Can add menu item',7,'add_menuitem'),(26,'Can change menu item',7,'change_menuitem'),(27,'Can delete menu item',7,'delete_menuitem'),(28,'Can view menu item',7,'view_menuitem'),(29,'Can add order',8,'add_order'),(30,'Can change order',8,'change_order'),(31,'Can delete order',8,'delete_order'),(32,'Can view order',8,'view_order'),(33,'Can add customer order log',9,'add_customerorderlog'),(34,'Can change customer order log',9,'change_customerorderlog'),(35,'Can delete customer order log',9,'delete_customerorderlog'),(36,'Can view customer order log',9,'view_customerorderlog'),(37,'Can add admin order status log',10,'add_adminorderstatuslog'),(38,'Can change admin order status log',10,'change_adminorderstatuslog'),(39,'Can delete admin order status log',10,'delete_adminorderstatuslog'),(40,'Can view admin order status log',10,'view_adminorderstatuslog'),(41,'Can add order item',11,'add_orderitem'),(42,'Can change order item',11,'change_orderitem'),(43,'Can delete order item',11,'delete_orderitem'),(44,'Can view order item',11,'view_orderitem'),(45,'Can add review',12,'add_review'),(46,'Can change review',12,'change_review'),(47,'Can delete review',12,'delete_review'),(48,'Can view review',12,'view_review'),(49,'Can add admin user',13,'add_adminuser'),(50,'Can change admin user',13,'change_adminuser'),(51,'Can delete admin user',13,'delete_adminuser'),(52,'Can view admin user',13,'view_adminuser');
 /*!40000 ALTER TABLE `auth_permission` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -213,7 +247,7 @@ CREATE TABLE `django_content_type` (
   `model` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `django_content_type_app_label_model_76bd3d3b_uniq` (`app_label`,`model`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -222,7 +256,7 @@ CREATE TABLE `django_content_type` (
 
 LOCK TABLES `django_content_type` WRITE;
 /*!40000 ALTER TABLE `django_content_type` DISABLE KEYS */;
-INSERT INTO `django_content_type` VALUES (1,'admin','logentry'),(10,'api','adminorderstatuslog'),(9,'api','customerorderlog'),(7,'api','menuitem'),(8,'api','order'),(11,'api','orderitem'),(12,'api','review'),(6,'api','user'),(3,'auth','group'),(2,'auth','permission'),(4,'contenttypes','contenttype'),(5,'sessions','session');
+INSERT INTO `django_content_type` VALUES (1,'admin','logentry'),(10,'api','adminorderstatuslog'),(13,'api','adminuser'),(9,'api','customerorderlog'),(7,'api','menuitem'),(8,'api','order'),(11,'api','orderitem'),(12,'api','review'),(6,'api','user'),(3,'auth','group'),(2,'auth','permission'),(4,'contenttypes','contenttype'),(5,'sessions','session');
 /*!40000 ALTER TABLE `django_content_type` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -239,7 +273,7 @@ CREATE TABLE `django_migrations` (
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `applied` datetime(6) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -248,7 +282,7 @@ CREATE TABLE `django_migrations` (
 
 LOCK TABLES `django_migrations` WRITE;
 /*!40000 ALTER TABLE `django_migrations` DISABLE KEYS */;
-INSERT INTO `django_migrations` VALUES (1,'contenttypes','0001_initial','2026-11-11 11:31:57.587473'),(2,'contenttypes','0002_remove_content_type_name','2026-11-11 11:31:57.928461'),(3,'auth','0001_initial','2026-11-11 11:31:58.218546'),(4,'auth','0002_alter_permission_name_max_length','2026-11-11 11:31:58.285261'),(5,'auth','0003_alter_user_email_max_length','2026-11-11 11:31:58.289710'),(6,'auth','0004_alter_user_username_opts','2026-11-11 11:31:58.295364'),(7,'auth','0005_alter_user_last_login_null','2026-11-11 11:31:58.297833'),(8,'auth','0006_require_contenttypes_0002','2026-11-11 11:31:58.297833'),(9,'auth','0007_alter_validators_add_error_messages','2026-11-11 11:31:58.306348'),(10,'auth','0008_alter_user_username_max_length','2026-11-11 11:31:58.314456'),(11,'auth','0009_alter_user_last_name_max_length','2026-11-11 11:31:58.315675'),(12,'auth','0010_alter_group_name_max_length','2026-11-11 11:31:58.331417'),(13,'auth','0011_update_proxy_permissions','2026-11-11 11:31:58.340047'),(14,'auth','0012_alter_user_first_name_max_length','2026-11-11 11:31:58.345603'),(15,'api','0001_initial','2026-11-11 11:31:58.747461'),(16,'admin','0001_initial','2026-11-11 11:31:58.897648'),(17,'admin','0002_logentry_remove_auto_add','2026-11-11 11:31:58.905714'),(18,'admin','0003_logentry_add_action_flag_choices','2026-11-11 11:31:58.914218'),(19,'api','0002_menuitem_order_customerorderlog_adminorderstatuslog_and_more','2026-11-11 11:31:59.775825'),(20,'api','0003_order_building_no_order_delivery_lat_and_more','2026-11-11 11:32:00.219931'),(21,'api','0004_order_payment_method','2026-11-11 11:32:00.299634'),(22,'sessions','0001_initial','2026-11-11 11:32:00.333428');
+INSERT INTO `django_migrations` VALUES (1,'contenttypes','0001_initial','2026-11-11 11:31:57.587473'),(2,'contenttypes','0002_remove_content_type_name','2026-11-11 11:31:57.928461'),(3,'auth','0001_initial','2026-11-11 11:31:58.218546'),(4,'auth','0002_alter_permission_name_max_length','2026-11-11 11:31:58.285261'),(5,'auth','0003_alter_user_email_max_length','2026-11-11 11:31:58.289710'),(6,'auth','0004_alter_user_username_opts','2026-11-11 11:31:58.295364'),(7,'auth','0005_alter_user_last_login_null','2026-11-11 11:31:58.297833'),(8,'auth','0006_require_contenttypes_0002','2026-11-11 11:31:58.297833'),(9,'auth','0007_alter_validators_add_error_messages','2026-11-11 11:31:58.306348'),(10,'auth','0008_alter_user_username_max_length','2026-11-11 11:31:58.314456'),(11,'auth','0009_alter_user_last_name_max_length','2026-11-11 11:31:58.315675'),(12,'auth','0010_alter_group_name_max_length','2026-11-11 11:31:58.331417'),(13,'auth','0011_update_proxy_permissions','2026-11-11 11:31:58.340047'),(14,'auth','0012_alter_user_first_name_max_length','2026-11-11 11:31:58.345603'),(15,'api','0001_initial','2026-11-11 11:31:58.747461'),(16,'admin','0001_initial','2026-11-11 11:31:58.897648'),(17,'admin','0002_logentry_remove_auto_add','2026-11-11 11:31:58.905714'),(18,'admin','0003_logentry_add_action_flag_choices','2026-11-11 11:31:58.914218'),(19,'api','0002_menuitem_order_customerorderlog_adminorderstatuslog_and_more','2026-11-11 11:31:59.775825'),(20,'api','0003_order_building_no_order_delivery_lat_and_more','2026-11-11 11:32:00.219931'),(21,'api','0004_order_payment_method','2026-11-11 11:32:00.299634'),(22,'sessions','0001_initial','2026-11-11 11:32:00.333428'),(23,'api','0005_admin_users','2026-11-18 09:52:48.767864');
 /*!40000 ALTER TABLE `django_migrations` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -298,7 +332,7 @@ CREATE TABLE `menu_items` (
   `updated_at` datetime(6) NOT NULL,
   PRIMARY KEY (`id`),
   CONSTRAINT `menu_items_chk_1` CHECK ((`discount_percent` >= 0))
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=44 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -307,6 +341,7 @@ CREATE TABLE `menu_items` (
 
 LOCK TABLES `menu_items` WRITE;
 /*!40000 ALTER TABLE `menu_items` DISABLE KEYS */;
+INSERT INTO `menu_items` VALUES (1,'2X Veg Scope Rice / Noodles','','','PUBG Truck Rice / Noodles',90.00,0,'menu/veg-fried-rice.jpg',1,'2026-11-18 12:16:03.964556','2026-11-18 12:16:03.964556'),(2,'3X Egg Scope Rice / Noodles','','','PUBG Truck Rice / Noodles',100.00,0,'menu/egg-fried-rice.jpg',1,'2026-11-18 12:16:03.980376','2026-11-18 12:16:03.980376'),(3,'4X Gobi Scope Rice / Noodles','','','PUBG Truck Rice / Noodles',120.00,0,'menu/gobi-fried-rice.jpg',1,'2026-11-18 12:16:03.987345','2026-11-18 12:16:03.987345'),(4,'6X Paneer Scope Rice / Noodles','','','PUBG Truck Rice / Noodles',130.00,0,'menu/paneer-fried-rice.jpg',1,'2026-11-18 12:16:03.990166','2026-11-18 12:16:03.990166'),(5,'8X Chicken Scope Rice / Noodles','','','PUBG Truck Rice / Noodles',130.00,0,'menu/chicken-fried-rice.jpg',1,'2026-11-18 12:16:03.996803','2026-11-18 12:16:03.996803'),(6,'Schezwan Extra','Add-on','','PUBG Truck Rice / Noodles',10.00,0,'menu/schezwan.jpg',1,'2026-11-18 12:16:04.000297','2026-11-18 12:16:04.000297'),(7,'Pan Bread Omelette','','','PUBG Truck SPL Snack',30.00,0,'menu/bread-omelette.jpg',1,'2026-11-18 12:16:04.006078','2026-11-18 12:16:04.006078'),(8,'Buggy SPL Bread Omelette','','','PUBG Truck SPL Snack',50.00,0,'menu/bread-omelette.jpg',1,'2026-11-18 12:16:04.006078','2026-11-18 12:16:04.006078'),(9,'UAZ Chilly Parotta','','','PUBG Truck SPL Snack',80.00,0,'menu/chilli-parotta.jpg',1,'2026-11-18 12:16:04.014677','2026-11-18 12:16:04.014677'),(10,'Chicken Lollipop','','','PUBG Truck SPL Snack',150.00,0,'menu/chicken-lollipop.jpg',1,'2026-11-18 12:16:04.014677','2026-11-18 12:16:04.014677'),(11,'Flare Wings','','','PUBG Truck SPL Snack',130.00,0,'menu/chicken-wings.jpg',1,'2026-11-18 12:16:04.022755','2026-11-18 12:16:04.022755'),(12,'Vikendi White BBQ (Quarter)','Quarter','','PUBG Truck BBQ',100.00,0,'menu/bbq-vikendi.jpg',1,'2026-11-18 12:16:04.022755','2026-11-18 12:16:04.022755'),(13,'Vikendi White BBQ (Half)','Half','','PUBG Truck BBQ',200.00,0,'menu/bbq-vikendi.jpg',1,'2026-11-18 12:16:04.030935','2026-11-18 12:16:04.030935'),(14,'Vikendi White BBQ (Full)','Full','','PUBG Truck BBQ',360.00,0,'menu/bbq-vikendi.jpg',1,'2026-11-18 12:16:04.030935','2026-11-18 12:16:04.030935'),(15,'Miramar Spicy BBQ (Quarter)','Quarter','','PUBG Truck BBQ',110.00,0,'menu/bbq-miramar.jpg',1,'2026-11-18 12:16:04.039404','2026-11-18 12:16:04.039404'),(16,'Miramar Spicy BBQ (Half)','Half','','PUBG Truck BBQ',220.00,0,'menu/bbq-miramar.jpg',1,'2026-11-18 12:16:04.045734','2026-11-18 12:16:04.045734'),(17,'Miramar Spicy BBQ (Full)','Full','','PUBG Truck BBQ',380.00,0,'menu/bbq-miramar.jpg',1,'2026-11-18 12:16:04.047843','2026-11-18 12:16:04.047843'),(18,'Sanhok Pepper BBQ (Quarter)','Quarter','','PUBG Truck BBQ',120.00,0,'menu/bbq-sanhok.jpg',1,'2026-11-18 12:16:04.055222','2026-11-18 12:16:04.055222'),(19,'Sanhok Pepper BBQ (Half)','Half','','PUBG Truck BBQ',240.00,0,'menu/bbq-sanhok.jpg',1,'2026-11-18 12:16:04.056230','2026-11-18 12:16:04.056230'),(20,'Sanhok Pepper BBQ (Full)','Full','','PUBG Truck BBQ',400.00,0,'menu/bbq-sanhok.jpg',1,'2026-11-18 12:16:04.064252','2026-11-18 12:16:04.064252'),(21,'Erangel SPL BBQ (Quarter)','Quarter','','PUBG Truck BBQ',130.00,0,'menu/bbq-erangel.jpg',1,'2026-11-18 12:16:04.064252','2026-11-18 12:16:04.064252'),(22,'Erangel SPL BBQ (Half)','Half','','PUBG Truck BBQ',260.00,0,'menu/bbq-erangel.jpg',1,'2026-11-18 12:16:04.072919','2026-11-18 12:16:04.072919'),(23,'Erangel SPL BBQ (Full)','Full','','PUBG Truck BBQ',420.00,0,'menu/bbq-erangel.jpg',1,'2026-11-18 12:16:04.072919','2026-11-18 12:16:04.072919'),(24,'SGBG Chicken Shawarma (Roll)','Roll','','PUBG Truck Shawarma',90.00,0,'menu/shawarma-roll.jpg',1,'2026-11-18 12:16:04.080899','2026-11-18 12:16:04.080899'),(25,'SGBG Chicken Shawarma (Plate)','Plate','','PUBG Truck Shawarma',140.00,0,'menu/shawarma-plate.jpg',1,'2026-11-18 12:16:04.083928','2026-11-18 12:16:04.083928'),(26,'UMP Garlic Shawarma (Roll)','Roll','','PUBG Truck Shawarma',100.00,0,'menu/shawarma-roll.jpg',1,'2026-11-18 12:16:04.089398','2026-11-18 12:16:04.089398'),(27,'UMP Garlic Shawarma (Plate)','Plate','','PUBG Truck Shawarma',150.00,0,'menu/shawarma-plate.jpg',1,'2026-11-18 12:16:04.089398','2026-11-18 12:16:04.089398'),(28,'UZI Spicy Shawarma (Roll)','Roll','','PUBG Truck Shawarma',100.00,0,'menu/shawarma-roll.jpg',1,'2026-11-18 12:16:04.097675','2026-11-18 12:16:04.097675'),(29,'UZI Spicy Shawarma (Plate)','Plate','','PUBG Truck Shawarma',150.00,0,'menu/shawarma-plate.jpg',1,'2026-11-18 12:16:04.100054','2026-11-18 12:16:04.100054'),(30,'SCARL Peri Peri Shawarma (Roll)','Roll','','PUBG Truck Shawarma',100.00,0,'menu/shawarma-roll.jpg',1,'2026-11-18 12:16:04.105901','2026-11-18 12:16:04.105901'),(31,'SCARL Peri Peri Shawarma (Plate)','Plate','','PUBG Truck Shawarma',150.00,0,'menu/shawarma-plate.jpg',1,'2026-11-18 12:16:04.114217','2026-11-18 12:16:04.114217'),(32,'M416 Arabian Shawarma (Roll)','Roll','','PUBG Truck Shawarma',100.00,0,'menu/shawarma-roll.jpg',1,'2026-11-18 12:16:04.114217','2026-11-18 12:16:04.114217'),(33,'M416 Arabian Shawarma (Plate)','Plate','','PUBG Truck Shawarma',150.00,0,'menu/shawarma-plate.jpg',1,'2026-11-18 12:16:04.122598','2026-11-18 12:16:04.122598'),(34,'M249 Mexican Shawarma (Roll)','Roll','','PUBG Truck Shawarma',100.00,0,'menu/shawarma-roll.jpg',1,'2026-11-18 12:16:04.122598','2026-11-18 12:16:04.122598'),(35,'M249 Mexican Shawarma (Plate)','Plate','','PUBG Truck Shawarma',150.00,0,'menu/shawarma-plate.jpg',1,'2026-11-18 12:16:04.131318','2026-11-18 12:16:04.131318'),(36,'AKM Schezwan Shawarma (Roll)','Roll','','PUBG Truck Shawarma',100.00,0,'menu/shawarma-roll.jpg',1,'2026-11-18 12:16:04.134198','2026-11-18 12:16:04.134198'),(37,'AKM Schezwan Shawarma (Plate)','Plate','','PUBG Truck Shawarma',150.00,0,'menu/shawarma-plate.jpg',1,'2026-11-18 12:16:04.139106','2026-11-18 12:16:04.139106'),(38,'KAR 98 SPL Shawarma (Roll)','Roll','','PUBG Truck Shawarma',110.00,0,'menu/shawarma-roll.jpg',1,'2026-11-18 12:16:04.139106','2026-11-18 12:16:04.139106'),(39,'KAR 98 SPL Shawarma (Plate)','Plate','','PUBG Truck Shawarma',160.00,0,'menu/shawarma-plate.jpg',1,'2026-11-18 12:16:04.148316','2026-11-18 12:16:04.148316'),(40,'M24 Chicken Dinner Shawarma (Roll)','Roll','','PUBG Truck Shawarma',110.00,0,'menu/shawarma-roll.jpg',1,'2026-11-18 12:16:04.155005','2026-11-18 12:16:04.155005'),(41,'M24 Chicken Dinner Shawarma (Plate)','Plate','','PUBG Truck Shawarma',160.00,0,'menu/shawarma-plate.jpg',1,'2026-11-18 12:16:04.164068','2026-11-18 12:16:04.164068'),(42,'AWM PUBG SPL Shawarma (Roll)','Roll','','PUBG Truck Shawarma',140.00,0,'menu/shawarma-roll.jpg',1,'2026-11-18 12:16:04.164583','2026-11-18 12:16:04.164583'),(43,'AWM PUBG SPL Shawarma (Plate)','Plate','','PUBG Truck Shawarma',200.00,0,'menu/shawarma-plate.jpg',1,'2026-11-18 12:16:04.172388','2026-11-18 12:16:04.172388');
 /*!40000 ALTER TABLE `menu_items` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -450,7 +485,7 @@ CREATE TABLE `users` (
   UNIQUE KEY `username` (`username`),
   UNIQUE KEY `email` (`email`),
   KEY `idx_users_role` (`role`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -459,6 +494,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES (1,'pbkdf2_sha256$870000$w7eW8FWAsde54ix2wSHSV4$JmlZ04p7abZbfSzE809Hexc7XxS2LXz6DiWtd2wkmpA=',NULL,0,'User','user@123gmail.com','Users','6488555222','customer',1,0,'2026-11-18 11:08:04.490509','2026-11-18 11:08:04.997648','2026-11-18 11:08:04.997648');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -531,4 +567,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-11 17:16:54
+-- Dump completed on 2026-11-18 17:56:30
