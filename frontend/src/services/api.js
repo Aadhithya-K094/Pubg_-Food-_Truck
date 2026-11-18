@@ -16,6 +16,7 @@ const api = axios.create({
 // runs ("Given token not valid for any token type").
 const PUBLIC_PATHS = [
   "/auth/login/",
+  "/auth/admin-login/",
   "/auth/register/",
   "/auth/google/",
   "/auth/refresh-token/",
@@ -47,11 +48,14 @@ export async function register(payload) {
   return data;
 }
 
-// `expectedRole` makes the backend reject a mismatched portal login.
+// Admin portal logins go to /auth/admin-login/ (checks the admin_users
+// table only); everything else goes to /auth/login/ (customers only).
 export async function login({ username, password, expectedRole }) {
+  const isAdminLogin = expectedRole === ROLES.ADMIN;
   const body = { username, password };
-  if (expectedRole) body.expected_role = expectedRole;
-  const { data } = await api.post("/auth/login/", body);
+  if (expectedRole && !isAdminLogin) body.expected_role = expectedRole;
+  const endpoint = isAdminLogin ? "/auth/admin-login/" : "/auth/login/";
+  const { data } = await api.post(endpoint, body);
   persistSession(data);
   return data;
 }

@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../components/Toast";
+import { LOGOUT } from "../constants/alertMessages";
 
 import {
   getCurrentUser,
@@ -27,6 +29,7 @@ const TABS = [
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const user = getCurrentUser();
 
   const [stats, setStats] = useState(null);
@@ -83,6 +86,7 @@ export default function AdminDashboard() {
 
   function handleLogout() {
     logout();
+    showToast("success", LOGOUT);
     navigate("/login", { replace: true });
   }
 

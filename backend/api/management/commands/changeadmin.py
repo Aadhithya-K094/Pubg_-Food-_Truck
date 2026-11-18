@@ -1,5 +1,5 @@
 """
-Change an admin account's username, email and/or password.
+Change an admin account's username, email and/or password (admin_users table).
 
 Interactive:
     python manage.py changeadmin
@@ -14,12 +14,11 @@ Leave a prompt blank to keep the current value.
 
 from getpass import getpass
 
-from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 
-User = get_user_model()
+from api.models import AdminUser
 
 
 class Command(BaseCommand):
@@ -43,7 +42,7 @@ class Command(BaseCommand):
         # ---- locate the account -------------------------------------
         current = options.get("current_username")
         if not current:
-            admins = User.objects.filter(role="admin").order_by("id")
+            admins = AdminUser.objects.order_by("id")
             if not admins:
                 raise CommandError("No admin accounts exist. Run: manage.py createadmin")
             self.stdout.write("Admin accounts:")
@@ -52,15 +51,9 @@ class Command(BaseCommand):
             current = input("Which username do you want to change? ").strip()
 
         try:
-            user = User.objects.get(username=current)
-        except User.DoesNotExist:
-            raise CommandError(f"No user named '{current}'.")
-
-        if user.role != "admin":
-            raise CommandError(
-                f"'{current}' has role '{user.role}', not 'admin'. "
-                "This command only edits admin accounts."
-            )
+            user = AdminUser.objects.get(username=current)
+        except AdminUser.DoesNotExist:
+            raise CommandError(f"No admin named '{current}'.")
 
         self.stdout.write(
             self.style.WARNING(
@@ -74,7 +67,7 @@ class Command(BaseCommand):
         if new_username is None:
             new_username = input(f"New username [{user.username}]: ").strip()
         if new_username and new_username != user.username:
-            if User.objects.filter(username=new_username).exclude(pk=user.pk).exists():
+            if AdminUser.objects.filter(username=new_username).exclude(pk=user.pk).exists():
                 raise CommandError(f"Username '{new_username}' is already taken.")
             user.username = new_username
 
@@ -83,7 +76,7 @@ class Command(BaseCommand):
         if new_email is None:
             new_email = input(f"New email [{user.email}]: ").strip()
         if new_email and new_email != user.email:
-            if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
+            if AdminUser.objects.filter(email=new_email).exclude(pk=user.pk).exists():
                 raise CommandError(f"Email '{new_email}' is already in use.")
             user.email = new_email
 

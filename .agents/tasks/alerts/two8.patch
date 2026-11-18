@@ -1,0 +1,218 @@
+diff --git a/frontend/src/App.css b/frontend/src/App.css
+index f41b321..ea3588a 100644
+--- a/frontend/src/App.css
++++ b/frontend/src/App.css
+@@ -3642,3 +3642,67 @@ img {
+ .order-fab.has-order {
+   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(76, 175, 80, 0.3);
+ }
++
++/* ---- shared toast additions + confirm dialog ---- */
++.toast-info {
++  border-left: 4px solid #4aa3ff;
++}
++.toast-info .toast-icon {
++  background: #4aa3ff;
++}
++.toast-msg {
++  white-space: pre-line;
++}
++.confirm-overlay {
++  position: fixed;
++  inset: 0;
++  z-index: 1100;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  padding: 16px;
++  background: rgba(0, 0, 0, 0.6);
++}
++.confirm-dialog {
++  width: min(380px, 100%);
++  padding: 20px;
++  border-radius: 14px;
++  background: rgba(24, 28, 35, 0.98);
++  border: 1px solid var(--glass-border);
++  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
++  color: var(--text-on-glass);
++}
++.confirm-message {
++  margin: 0 0 16px;
++  font-size: 15px;
++  font-weight: 600;
++  line-height: 1.4;
++}
++.confirm-actions {
++  display: flex;
++  justify-content: flex-end;
++  gap: 10px;
++}
++.confirm-btn {
++  border: 1px solid var(--glass-border);
++  border-radius: 10px;
++  padding: 9px 16px;
++  font-size: 13.5px;
++  font-weight: 700;
++  cursor: pointer;
++}
++.confirm-btn.ghost {
++  background: transparent;
++  color: var(--text-on-glass);
++}
++.confirm-btn.danger {
++  background: var(--pubg-yellow);
++  border-color: var(--pubg-yellow);
++  color: #111;
++}
++.tracker-status-msg {
++  margin: 8px 0 0;
++  font-size: 13px;
++  font-weight: 600;
++  color: var(--pubg-yellow);
++}
+\ No newline at end of file
+diff --git a/frontend/src/pages/Login.js b/frontend/src/pages/Login.js
+index aed5b2b..65bf5f4 100644
+--- a/frontend/src/pages/Login.js
++++ b/frontend/src/pages/Login.js
+@@ -2,6 +2,13 @@ import React, { useEffect, useRef, useState } from "react";
+ import { useNavigate } from "react-router-dom";
+ 
+ import { login, register, googleLogin, ROLES } from "../services/api";
++import { useToast } from "../components/Toast";
++import {
++  LOGIN_SUCCESS,
++  INVALID_PASSWORD,
++  EMPTY_FIELDS,
++  REGISTER_SUCCESS,
++} from "../constants/alertMessages";
+ import logo from "../assets/images/logo.png";
+ import loginBg from "../assets/images/login-bg.jpg";
+ 
+@@ -53,6 +60,7 @@ function EyeIcon({ off }) {
+ 
+ export default function Login() {
+   const navigate = useNavigate();
++  const { showToast, dismissToast } = useToast();
+   const [portal, setPortal] = useState(ROLES.CUSTOMER);
+   const [mode, setMode] = useState("login"); // "login" | "register"
+   const [form, setForm] = useState({
+@@ -64,7 +72,6 @@ export default function Login() {
+     password2: "",
+   });
+   const [errors, setErrors] = useState({});
+-  const [toast, setToast] = useState(null); // { type, title, message }
+   const [loading, setLoading] = useState(false);
+   const [showPw, setShowPw] = useState(false);
+   const [showPw2, setShowPw2] = useState(false);
+@@ -72,18 +79,10 @@ export default function Login() {
+   // field, then fades in slowly (~2s).
+   const [bgVisible, setBgVisible] = useState(false);
+   const formRef = useRef(null);
+-  const toastTimer = useRef(null);
+   const googleBtnRef = useRef(null);
+   const navigateRef = useRef(navigate);
+   navigateRef.current = navigate;
+ 
+-  // Side-popup toast helper. Auto-dismisses after a few seconds.
+-  function showToast(type, title, message) {
+-    setToast({ type, title, message });
+-    if (toastTimer.current) clearTimeout(toastTimer.current);
+-    toastTimer.current = setTimeout(() => setToast(null), 4500);
+-  }
+-
+   // Initialise "Sign in with Google" once the GIS script has loaded.
+   // Renders the official Google button into googleBtnRef.
+   useEffect(() => {
+@@ -94,6 +93,7 @@ export default function Login() {
+     async function handleCredential(resp) {
+       try {
+         const data = await googleLogin(resp.credential);
++        showToast("success", LOGIN_SUCCESS);
+         navigateRef.current(data?.user?.role === ROLES.ADMIN ? "/admin" : "/", {
+           replace: true,
+         });
+@@ -180,7 +180,7 @@ export default function Login() {
+     setPortal(nextPortal);
+     setMode("login");
+     setErrors({});
+-    setToast(null);
++    dismissToast();
+     // Keep Customer and Admin logins separate: clear whatever was typed so
+     // customer-entered credentials never appear in the admin fields.
+     clearAllFields();
+@@ -251,6 +251,13 @@ export default function Login() {
+     }
+ 
+     setErrors(next);
++    const requiredValues = isRegister
++      ? [u, em, fn, ph, form.password, form.password2]
++      : [u, form.password];
++    if (requiredValues.some((v) => !v)) {
++      showToast("error", EMPTY_FIELDS);
++      return false;
++    }
+     if (Object.keys(next).length > 0) {
+       // Summarise which fields need attention in the side popup.
+       const labels = {
+@@ -310,7 +317,7 @@ export default function Login() {
+         setMode("login");
+         showToast(
+           "success",
+-          "Account created",
++          REGISTER_SUCCESS,
+           "Please log in with your new credentials."
+         );
+       } else {
+@@ -319,11 +326,14 @@ export default function Login() {
+           password: form.password,
+           expectedRole: portal,
+         });
++        showToast("success", LOGIN_SUCCESS);
+         navigate(data?.user?.role === ROLES.ADMIN ? "/admin" : "/", { replace: true });
+       }
+     } catch (err) {
+       const d = err?.response?.data;
+-      if (d && typeof d === "object") {
++      if (!isRegister && err?.response?.status === 401) {
++        showToast("error", INVALID_PASSWORD);
++      } else if (d && typeof d === "object") {
+         const mapped = {};
+         for (const k of ["username", "email", "full_name", "phone", "password"]) {
+           if (d[k]) mapped[k] = Array.isArray(d[k]) ? d[k][0] : d[k];
+@@ -355,26 +365,6 @@ export default function Login() {
+         aria-hidden="true"
+       />
+ 
+-      {/* Side-popup toast for alerts */}
+-      {toast && (
+-        <div className={`toast toast-${toast.type}`} role="alert">
+-          <span className="toast-icon" aria-hidden="true">
+-            {toast.type === "success" ? "Γ£ô" : "!"}
+-          </span>
+-          <div className="toast-body">
+-            <strong className="toast-title">{toast.title}</strong>
+-            <span className="toast-msg">{toast.message}</span>
+-          </div>
+-          <button
+-            type="button"
+-            className="toast-close"
+-            onClick={() => setToast(null)}
+-            aria-label="Dismiss"
+-          >
+-            ├ù
+-          </button>
+-        </div>
+-      )}
+ 
+       <div className={`auth-card ${isRegister ? "is-register" : ""}`}>
+         <div className="auth-brand">
+@@ -627,7 +617,7 @@ export default function Login() {
+               onClick={() => {
+                 setMode(mode === "register" ? "login" : "register");
+                 setErrors({});
+-                setToast(null);
++                dismissToast();
+                 clearAllFields();
+               }}
+             >

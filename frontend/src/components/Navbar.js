@@ -2,12 +2,15 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { logout, getMyOrders } from "../services/api";
+import { useToast } from "./Toast";
+import { LOGOUT } from "../constants/alertMessages";
 import OrderTracker, { isCurrentOrder } from "./OrderTracker";
 import { IconReceipt, IconPhone, IconGear, IconHome } from "./Icons";
 import logo from "../assets/images/logo.png";
 
 export default function Navbar({ user, onHome }) {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [open, setOpen] = useState(false); // mobile menu
   const [panel, setPanel] = useState(null); // orders / contact / profile / help
   const [settingsOpen, setSettingsOpen] = useState(false); // settings dropdown
@@ -54,6 +57,7 @@ export default function Navbar({ user, onHome }) {
 
   function handleLogout() {
     logout();
+    showToast("success", LOGOUT);
     navigate("/login", { replace: true });
   }
 

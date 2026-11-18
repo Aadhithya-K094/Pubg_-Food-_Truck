@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 
 import { IconScooter, IconBag, IconPin } from "./Icons";
+import { useToast } from "./Toast";
+import { EMPTY_CART, INVALID_PAYMENT } from "../constants/alertMessages";
 
 /**
  * Checkout panel with a multi-step flow.
@@ -22,6 +24,7 @@ export default function Cart({
   onPlaceOrder,
   hasCurrentOrder = false,
 }) {
+  const { showToast } = useToast();
   const isDoorstep = service === "doorstep";
   const isDining = service === "dining";
 
@@ -61,7 +64,7 @@ export default function Cart({
     setErr("");
     if (step === 0) {
       if (!hasItems) {
-        setErr("Add at least one item to continue.");
+        showToast("error", EMPTY_CART);
         return;
       }
       setStep(1);
@@ -78,6 +81,7 @@ export default function Cart({
   function confirmDoorstep() {
     if (!payMethod) {
       setErr("Please choose a payment method.");
+      showToast("error", INVALID_PAYMENT);
       return;
     }
     onPlaceOrder({
@@ -92,7 +96,7 @@ export default function Cart({
 
   function confirmOnSpot() {
     if (!hasItems) {
-      setErr("Add at least one item to continue.");
+      showToast("error", EMPTY_CART);
       return;
     }
     const extra = { payment_method: "on_spot" };

@@ -17,7 +17,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from .models import Role
+from .models import AdminUser, Role
 
 User = get_user_model()
 
@@ -132,10 +132,58 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+class AdminUserSerializer(serializers.ModelSerializer):
+    """Public representation of an admin_users account (no password)."""
+
+    role = serializers.CharField(read_only=True)
+    date_joined = serializers.DateTimeField(source="created_at", read_only=True)
+
+    class Meta:
+        model = AdminUser
+        fields = [
+            "id",
+            "username",
+            "email",
+            "full_name",
+            "phone",
+            "role",
+            "date_joined",
+        ]
+        read_only_fields = fields
+
+
+class AdminCreateAdminSerializer(serializers.ModelSerializer):
+    """Create an additional admin in the admin_users table."""
+
+    password = serializers.CharField(
+        write_only=True,
+        required=True,
+        style={"input_type": "password"},
+    )
+
+    class Meta:
+        model = AdminUser
+        fields = ["username", "email", "full_name", "phone", "password"]
+
+    def validate_username(self, value):
+        return validate_username_value(value)
+
+    def validate_phone(self, value):
+        return validate_phone_value(value)
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        return AdminUser.objects.create_admin(password=password, **validated_data)
+
+
 class AdminCreateUserSerializer(serializers.ModelSerializer):
     """
-    Admin-only user creation. An existing admin may create either an
-    additional admin (e.g. another order receiver) or a customer.
+    Admin-only CUSTOMER creation (admins are created with
+    AdminCreateAdminSerializer, into the separate admin_users table).
     """
 
     password = serializers.CharField(
@@ -161,12 +209,18 @@ class AdminCreateUserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop("password")
-        role = validated_data.pop("role", Role.CUSTOMER)
-        if role == Role.ADMIN:
-            return User.objects.create_admin(password=password, **validated_data)
+        validated_data.pop("role", None)
         return User.objects.create_user(
             password=password, role=Role.CUSTOMER, **validated_data
         )
+
+
+class AdminLoginSerializer(serializers.Serializer):
+    username = serializers.CharField()  # username OR email
+    password = serializers.CharField(
+        write_only=True,
+        style={"input_type": "password"},
+    )
 
 
 class LoginSerializer(serializers.Serializer):
@@ -175,9 +229,7 @@ class LoginSerializer(serializers.Serializer):
         write_only=True,
         style={"input_type": "password"},
     )
-    # Optional: which portal the user is signing in from. When provided,
-    # the account's real role must match, so a customer cannot sign in
-    # through the admin portal (and vice versa).
+    # Ignored for matching; "admin" is refused (use /api/auth/admin-login/).
     expected_role = serializers.ChoiceField(
         choices=Role.choices, required=False, allow_null=True
     )

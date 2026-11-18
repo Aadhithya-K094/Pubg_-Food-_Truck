@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 import { IconPin, IconPhone, IconChat } from "./Icons";
+import { ORDER_STATUS_MESSAGES, formatOrderNumber } from "../constants/alertMessages";
 
 /**
  * Order status + (for doorstep) delivery tracker.
@@ -67,7 +68,7 @@ export default function OrderTracker({ order, showMap = true }) {
   return (
     <div className="tracker">
       <div className="tracker-head">
-        <span className="tracker-id">Order #{order.id}</span>
+        <span className="tracker-id">Order #{formatOrderNumber(order.id)}</span>
         <span className={`tracker-status status-${order.status}`}>
           {order.status_display || order.status}
         </span>
@@ -81,6 +82,9 @@ export default function OrderTracker({ order, showMap = true }) {
         </span>
       </div>
 
+      {ORDER_STATUS_MESSAGES[order.status] && (
+        <p className="tracker-status-msg">{ORDER_STATUS_MESSAGES[order.status]}</p>
+      )}
       {/* progress steps (not for rejected). The coloured fill line grows
           from one step to the next as each stage completes. */}
       {!isRejected ? (
@@ -181,12 +185,12 @@ export default function OrderTracker({ order, showMap = true }) {
           className="map-modal-overlay"
           onClick={() => setMapExpanded(false)}
           role="dialog"
-          aria-label={`Live tracking map for order ${order.id}`}
+          aria-label={`Live tracking map for order ${formatOrderNumber(order.id)}`}
         >
           <div className="map-modal" onClick={(e) => e.stopPropagation()}>
             <div className="map-modal-head">
               <span className="map-modal-title">
-                <IconPin /> Live Tracking · Order #{order.id}
+                <IconPin /> Live Tracking · Order #{formatOrderNumber(order.id)}
               </span>
               <button
                 type="button"

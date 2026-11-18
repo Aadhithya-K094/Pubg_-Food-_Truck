@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import AdminDashboard from "./pages/AdminDashboard";
 import { getCurrentUser, ROLES } from "./services/api";
+import { ToastProvider } from "./components/Toast";
 import "./App.css";
 
 /**
@@ -22,6 +23,7 @@ function RequireAuth({ role, children }) {
 
 export default function App() {
   return (
+    <ToastProvider>
     <Routes>
       <Route path="/login" element={<Login />} />
 
@@ -47,5 +49,6 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </ToastProvider>
   );
 }

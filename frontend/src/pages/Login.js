@@ -2,6 +2,13 @@ import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { login, register, googleLogin, ROLES } from "../services/api";
+import { useToast } from "../components/Toast";
+import {
+  LOGIN_SUCCESS,
+  INVALID_PASSWORD,
+  EMPTY_FIELDS,
+  REGISTER_SUCCESS,
+} from "../constants/alertMessages";
 import logo from "../assets/images/logo.png";
 import loginBg from "../assets/images/login-bg.jpg";
 
@@ -53,6 +60,7 @@ function EyeIcon({ off }) {
 
 export default function Login() {
   const navigate = useNavigate();
+  const { showToast, dismissToast } = useToast();
   const [portal, setPortal] = useState(ROLES.CUSTOMER);
   const [mode, setMode] = useState("login"); // "login" | "register"
   const [form, setForm] = useState({
@@ -64,25 +72,17 @@ export default function Login() {
     password2: "",
   });
   const [errors, setErrors] = useState({});
-  const [toast, setToast] = useState(null); // { type, title, message }
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [showPw2, setShowPw2] = useState(false);
-  // The photo background stays blank until the user focuses the username
-  // field, then fades in slowly (~2s).
+  // The photo background stays blank until the user clicks/taps anywhere on
+  // the login page (or moves focus into it with the keyboard), then fades in
+  // slowly (~2s, see .screen-bg transition in App.css).
   const [bgVisible, setBgVisible] = useState(false);
   const formRef = useRef(null);
-  const toastTimer = useRef(null);
   const googleBtnRef = useRef(null);
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
-
-  // Side-popup toast helper. Auto-dismisses after a few seconds.
-  function showToast(type, title, message) {
-    setToast({ type, title, message });
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(null), 4500);
-  }
 
   // Initialise "Sign in with Google" once the GIS script has loaded.
   // Renders the official Google button into googleBtnRef.
@@ -94,6 +94,7 @@ export default function Login() {
     async function handleCredential(resp) {
       try {
         const data = await googleLogin(resp.credential);
+        showToast("success", LOGIN_SUCCESS);
         navigateRef.current(data?.user?.role === ROLES.ADMIN ? "/admin" : "/", {
           replace: true,
         });
@@ -180,7 +181,7 @@ export default function Login() {
     setPortal(nextPortal);
     setMode("login");
     setErrors({});
-    setToast(null);
+    dismissToast();
     // Keep Customer and Admin logins separate: clear whatever was typed so
     // customer-entered credentials never appear in the admin fields.
     clearAllFields();
@@ -251,6 +252,13 @@ export default function Login() {
     }
 
     setErrors(next);
+    const requiredValues = isRegister
+      ? [u, em, fn, ph, form.password, form.password2]
+      : [u, form.password];
+    if (requiredValues.some((v) => !v)) {
+      showToast("error", EMPTY_FIELDS);
+      return false;
+    }
     if (Object.keys(next).length > 0) {
       // Summarise which fields need attention in the side popup.
       const labels = {
@@ -310,7 +318,7 @@ export default function Login() {
         setMode("login");
         showToast(
           "success",
-          "Account created",
+          REGISTER_SUCCESS,
           "Please log in with your new credentials."
         );
       } else {
@@ -319,11 +327,14 @@ export default function Login() {
           password: form.password,
           expectedRole: portal,
         });
+        showToast("success", LOGIN_SUCCESS);
         navigate(data?.user?.role === ROLES.ADMIN ? "/admin" : "/", { replace: true });
       }
     } catch (err) {
       const d = err?.response?.data;
-      if (d && typeof d === "object") {
+      if (!isRegister && err?.response?.status === 401) {
+        showToast("error", INVALID_PASSWORD);
+      } else if (d && typeof d === "object") {
         const mapped = {};
         for (const k of ["username", "email", "full_name", "phone", "password"]) {
           if (d[k]) mapped[k] = Array.isArray(d[k]) ? d[k][0] : d[k];
@@ -348,7 +359,11 @@ export default function Login() {
   }
 
   return (
-    <div className="screen auth-wrapper">
+    <div
+      className="screen auth-wrapper"
+      onPointerDown={() => setBgVisible(true)}
+      onFocusCapture={() => setBgVisible(true)}
+    >
       <div
         className={`screen-bg ${bgVisible ? "revealed" : ""}`}
         style={{ backgroundImage: `url(${loginBg})` }}
@@ -437,7 +452,6 @@ export default function Login() {
               className={`auth-input ${errors.username ? "invalid" : ""}`}
               type="text"
               autoComplete="off"
-              onFocus={() => setBgVisible(true)}
               value={form.username}
               onChange={(e) =>
                 update(
@@ -627,7 +641,7 @@ export default function Login() {
               onClick={() => {
                 setMode(mode === "register" ? "login" : "register");
                 setErrors({});
-                setToast(null);
+                dismissToast();
                 clearAllFields();
               }}
             >

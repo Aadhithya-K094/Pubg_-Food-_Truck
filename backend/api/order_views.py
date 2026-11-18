@@ -5,7 +5,7 @@ Views for menu, orders, reviews, and the admin dashboard.
 from django.db.models import Count, Q
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -27,7 +27,7 @@ from .order_serializers import (
     PlaceOrderSerializer,
     ReviewSerializer,
 )
-from .permissions import IsAdminRole
+from .permissions import IsAdminRole, IsCustomerRole
 
 
 # ------------------------------------------------------------
@@ -61,7 +61,7 @@ class MenuListView(APIView):
 class PlaceOrderView(APIView):
     """POST /api/orders/ — customer places an order."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCustomerRole]
 
     def post(self, request):
         serializer = PlaceOrderSerializer(data=request.data, context={"request": request})
@@ -79,7 +79,7 @@ class PlaceOrderView(APIView):
 class MyOrdersView(APIView):
     """GET /api/orders/mine/ — the signed-in customer's orders."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsCustomerRole]
 
     def get(self, request):
         orders = Order.objects.filter(customer=request.user).prefetch_related("items")
@@ -257,7 +257,7 @@ class ReviewListCreateView(APIView):
     """
 
     def get_permissions(self):
-        return [AllowAny()] if self.request.method == "GET" else [IsAuthenticated()]
+        return [AllowAny()] if self.request.method == "GET" else [IsCustomerRole()]
 
     def get(self, request):
         reviews = Review.objects.filter(is_published=True)

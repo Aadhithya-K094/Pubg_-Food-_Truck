@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { getCurrentUser, getMenu, placeOrder, getMyOrders } from "../services/api";
 import Navbar from "../components/Navbar";
@@ -6,6 +6,23 @@ import MenuGrid from "../components/MenuGrid";
 import Cart from "../components/Cart";
 import OrderTracker, { isCurrentOrder } from "../components/OrderTracker";
 import UpiPayment from "../components/UpiPayment";
+import { useToast } from "../components/Toast";
+import {
+  ITEM_ADDED,
+  ITEM_REMOVED,
+  EMPTY_CART,
+  CART_UPDATED,
+  QTY_INCREASED,
+  QTY_DECREASED,
+  REMOVE_ITEM_CONFIRM,
+  CLEAR_CART_CONFIRM,
+  PAYMENT_SUCCESS,
+  PAYMENT_PENDING,
+  ORDER_CONFIRMED,
+  ORDER_PREPARING_TOAST,
+  ORDER_STATUS_MESSAGES,
+  formatOrderNumber,
+} from "../constants/alertMessages";
 import { IconScooter, IconDining, IconBag } from "../components/Icons";
 import logo from "../assets/images/logo.png";
 import sideBg from "../assets/images/dashboard-bg.jpg";
@@ -34,21 +51,20 @@ const SERVICES = [
 
 export default function Home() {
   const user = getCurrentUser();
-
+  const { showToast, confirm } = useToast();
   const [service, setService] = useState(null); // chosen service key
   const [menu, setMenu] = useState([]);
   const [loadingMenu, setLoadingMenu] = useState(false);
   const [menuError, setMenuError] = useState("");
   const [cart, setCart] = useState({}); // { [menuItemId]: qty }
-  const [toast, setToast] = useState(null);
   const [currentOrders, setCurrentOrders] = useState([]); // active orders
   const [upiPay, setUpiPay] = useState(null); // { amount, orderId } when online payment chosen
   const [cartOpen, setCartOpen] = useState(false); // order popup open?
 
-  function showToast(type, msg) {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 3500);
-  }
+  const serviceRef = useRef(service);
+  serviceRef.current = service;
+  // Last known { status, payment_status } per order id, to detect real changes.
+  const knownRef = useRef(new Map());
 
   // Load the customer's CURRENT (in-progress) orders for the chosen service.
   function loadCurrentOrders(svc) {
@@ -87,6 +103,62 @@ export default function Home() {
     };
   }, [service]);
 
+  // Poll the customer's orders and toast ONCE when an order actually changes
+  // status (or gets paid). The first sight of an order only seeds the baseline.
+  useEffect(() => {
+    let cancelled = false;
+    async function poll() {
+      if (document.hidden) return;
+      let all;
+      try {
+        all = await getMyOrders();
+      } catch (e) {
+        return;
+      }
+      if (cancelled) return;
+      const known = knownRef.current;
+      let best = null; // highest-priority event: completed > processing > accepted > paid
+      let changed = false;
+      const rank = { completed: 4, processing: 3, accepted: 2, paid: 1 };
+      const consider = (kind) => {
+        if (!best || rank[kind] > rank[best]) best = kind;
+      };
+      all.forEach((o) => {
+        const prev = known.get(o.id);
+        if (prev) {
+          if (prev.status !== o.status) {
+            changed = true;
+            if (rank[o.status] > 1) consider(o.status);
+          }
+          if (prev.payment_status !== "paid" && o.payment_status === "paid") {
+            changed = true;
+            consider("paid");
+          }
+        }
+        known.set(o.id, { status: o.status, payment_status: o.payment_status });
+      });
+      if (!changed) return;
+      if (serviceRef.current) {
+        setCurrentOrders(
+          all.filter(
+            (o) => isCurrentOrder(o) && o.service_type === serviceRef.current
+          )
+        );
+      }
+      if (best === "completed") showToast("success", ORDER_STATUS_MESSAGES.completed);
+      else if (best === "processing")
+        showToast("success", ORDER_PREPARING_TOAST.title, ORDER_PREPARING_TOAST.body);
+      else if (best === "accepted") showToast("success", ORDER_STATUS_MESSAGES.accepted);
+      else if (best === "paid") showToast("success", PAYMENT_SUCCESS);
+    }
+    poll();
+    const timer = setInterval(poll, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [showToast]);
+
   function setQty(itemId, qty) {
     setCart((c) => {
       const next = { ...c };
@@ -94,6 +166,45 @@ export default function Home() {
       else next[itemId] = qty;
       return next;
     });
+  }
+
+  // Quantity changes from the menu and the cart, with one alert per action.
+  async function handleQty(itemId, qty) {
+    const prev = cart[itemId] || 0;
+    if (qty <= 0) {
+      if (prev === 0) return;
+      const ok = await confirm({
+        message: REMOVE_ITEM_CONFIRM,
+        confirmLabel: "Yes, remove",
+        cancelLabel: "Keep it",
+      });
+      if (!ok) return;
+      setQty(itemId, 0);
+      showToast("success", ITEM_REMOVED);
+      return;
+    }
+    setQty(itemId, qty);
+    if (prev === 0) showToast("success", ITEM_ADDED);
+    else if (qty > prev) showToast("success", QTY_INCREASED);
+    else if (qty < prev) showToast("success", QTY_DECREASED);
+  }
+
+  // Leaving a service empties the cart, so confirm first when it has items.
+  async function leaveService() {
+    if (cartCount > 0) {
+      const ok = await confirm({
+        message: CLEAR_CART_CONFIRM,
+        confirmLabel: "Yes, clear",
+        cancelLabel: "Not now",
+      });
+      if (!ok) return;
+      setService(null);
+      setCart({});
+      showToast("success", CART_UPDATED);
+      return;
+    }
+    setService(null);
+    setCart({});
   }
 
   const cartLines = useMemo(
@@ -124,7 +235,7 @@ export default function Home() {
 
   async function handlePlaceOrder(extra) {
     if (cartLines.length === 0) {
-      showToast("error", "Your cart is empty.");
+      showToast("error", EMPTY_CART);
       return;
     }
     const payload = {
@@ -137,6 +248,13 @@ export default function Home() {
     };
     try {
       const res = await placeOrder(payload);
+      const createdOrder = res?.order || res;
+      if (createdOrder?.id != null) {
+        knownRef.current.set(createdOrder.id, {
+          status: createdOrder.status || "pending",
+          payment_status: createdOrder.payment_status || "unpaid",
+        });
+      }
       setCart({}); // clear the cart so it can't be re-submitted
       setCartOpen(false); // close the order popup after confirmation
       loadCurrentOrders(service); // show it in the Current Order card
@@ -151,7 +269,9 @@ export default function Home() {
       }
       showToast(
         "success",
-        "Order placed. The truck will accept it shortly."
+        ORDER_CONFIRMED.title,
+        `${ORDER_CONFIRMED.body}\nOrder #${formatOrderNumber(createdOrder?.id)}`,
+        { duration: 6500 }
       );
     } catch (err) {
       const d = err?.response?.data;
@@ -170,10 +290,7 @@ export default function Home() {
       <div className="app-bg" style={{ backgroundImage: `url(${sideBg})` }} aria-hidden="true" />
       <Navbar
         user={user}
-        onHome={() => {
-          setService(null);
-          setCart({});
-        }}
+        onHome={leaveService}
       />
 
       <UpiPayment
@@ -183,21 +300,10 @@ export default function Home() {
         onClose={() => setUpiPay(null)}
         onPaid={() => {
           setUpiPay(null);
-          showToast("success", "Thanks! We'll confirm your payment shortly.");
+          showToast("info", PAYMENT_PENDING);
         }}
       />
 
-      {toast && (
-        <div className={`toast toast-${toast.type}`} role="alert">
-          <span className="toast-icon">{toast.type === "success" ? "✓" : "!"}</span>
-          <div className="toast-body">
-            <span className="toast-msg">{toast.msg}</span>
-          </div>
-          <button className="toast-close" onClick={() => setToast(null)}>
-            ×
-          </button>
-        </div>
-      )}
 
       <main className="cust-main">
         {!service ? (
@@ -232,10 +338,7 @@ export default function Home() {
               <div className="order-head">
                 <button
                   className="back-btn"
-                  onClick={() => {
-                    setService(null);
-                    setCart({});
-                  }}
+                  onClick={leaveService}
                 >
                   ← Back
                 </button>
@@ -287,7 +390,7 @@ export default function Home() {
               {loadingMenu && <p className="cust-muted">Loading menu…</p>}
               {menuError && <p className="cust-error">{menuError}</p>}
               {!loadingMenu && !menuError && (
-                <MenuGrid menu={menu} cart={cart} onQty={setQty} />
+                <MenuGrid menu={menu} cart={cart} onQty={handleQty} />
               )}
             </div>
 
@@ -302,7 +405,12 @@ export default function Home() {
         <button
           type="button"
           className={`order-fab ${currentOrders.length > 0 ? "has-order" : ""}`}
-          onClick={() => setCartOpen(true)}
+          onClick={() => {
+            if (cartCount === 0 && currentOrders.length === 0) {
+              showToast("error", EMPTY_CART);
+            }
+            setCartOpen(true);
+          }}
           aria-label={
             cartCount > 0
               ? `Open your order (${cartCount} item${cartCount === 1 ? "" : "s"})`
@@ -361,7 +469,7 @@ export default function Home() {
               service={service}
               lines={cartLines}
               total={cartTotal}
-              onQty={setQty}
+              onQty={handleQty}
               onPlaceOrder={handlePlaceOrder}
               hasCurrentOrder={currentOrders.length > 0}
             />

@@ -1,5 +1,5 @@
 """
-Django admin configuration for the custom User model.
+Django admin configuration for the custom User model (customers) and the\nseparate AdminUser model (admin_users).
 
 Uses Django's built-in UserAdmin rather than a plain ModelAdmin. That
 matters for security: a plain ModelAdmin renders `password` as an ordinary
@@ -11,7 +11,11 @@ plus a dedicated "change password" form that runs set_password().
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.contrib.auth.forms import UserChangeForm, UserCreationForm
+from django.contrib.auth.forms import (
+    UserChangeForm,
+    UserCreationForm,
+)
+from django import forms
 
 User = get_user_model()
 
@@ -70,8 +74,8 @@ class UserAdmin(BaseUserAdmin):
                     "user_permissions",
                 ),
                 "description": (
-                    "'admin' is the food truck owner / order receiver. "
-                    "'customer' places orders."
+                    "Customers only. Owner/order-receiver accounts live in "
+                    "the separate Admin users table (admin_users)."
                 ),
             },
         ),
@@ -97,6 +101,7 @@ class UserAdmin(BaseUserAdmin):
 
 
 from .models import (  # noqa: E402
+    AdminUser,
     MenuItem,
     Order,
     OrderItem,
@@ -141,3 +146,48 @@ class CustomerOrderLogAdmin(admin.ModelAdmin):
 @admin.register(AdminOrderStatusLog)
 class AdminOrderStatusLogAdmin(admin.ModelAdmin):
     list_display = ("id", "order", "admin", "from_status", "to_status", "created_at")
+
+class AdminAccountCreationForm(forms.ModelForm):
+    """Create an admin_users row with a hashed password."""
+
+    password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
+    password2 = forms.CharField(label="Password (again)", widget=forms.PasswordInput)
+
+    class Meta:
+        model = AdminUser
+        fields = ("username", "email", "full_name", "phone", "is_active")
+
+    def clean_password2(self):
+        p1, p2 = self.cleaned_data.get("password1"), self.cleaned_data.get("password2")
+        if p1 and p2 and p1 != p2:
+            raise forms.ValidationError("The two password fields did not match.")
+        return p2
+
+    def save(self, commit=True):
+        obj = super().save(commit=False)
+        obj.set_password(self.cleaned_data["password1"])
+        if commit:
+            obj.save()
+        return obj
+
+
+@admin.register(AdminUser)
+class AdminUserAdmin(admin.ModelAdmin):
+    """Owner / order-receiver accounts (table: admin_users)."""
+
+    list_display = ("id", "username", "email", "full_name", "is_active", "last_login", "created_at")
+    search_fields = ("username", "email", "full_name")
+    list_filter = ("is_active",)
+    readonly_fields = ("password", "last_login", "created_at", "updated_at")
+    fields = ("username", "email", "full_name", "phone", "is_active", "password", "last_login", "created_at", "updated_at")
+
+    def get_form(self, request, obj=None, **kwargs):
+        if obj is None:
+            kwargs["form"] = AdminAccountCreationForm
+            kwargs["fields"] = ("username", "email", "full_name", "phone", "is_active", "password1", "password2")
+        return super().get_form(request, obj, **kwargs)
+
+    def get_fields(self, request, obj=None):
+        if obj is None:
+            return ("username", "email", "full_name", "phone", "is_active", "password1", "password2")
+        return super().get_fields(request, obj)

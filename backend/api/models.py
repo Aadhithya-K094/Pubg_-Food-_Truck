@@ -1,7 +1,8 @@
 """
 Data models for the PUBG Food Truck app.
 
-  * User            - accounts (admin / customer), mapped to `users` table
+  * User            - CUSTOMER accounts, mapped to `users` table
+  * AdminUser       - ADMIN (owner / order receiver) accounts, mapped to `admin_users`
   * MenuItem        - food items the customer can order
   * Order           - a placed order (one of three service types)
   * OrderItem       - a line item within an order (menu item + quantity)
@@ -50,18 +51,11 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("role", "customer")
         return self._create_user(username, email, password, **extra_fields)
 
-    def create_admin(self, username, email, password=None, **extra_fields):
-        """Create the food truck owner / order receiver."""
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", False)
-        extra_fields["role"] = "admin"
-        return self._create_user(username, email, password, **extra_fields)
-
     def create_superuser(self, username, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-        # A superuser is an owner-level account.
-        extra_fields.setdefault("role", "admin")
+        # Superusers only exist for the Django /admin/ site. Real app admins
+        # live in the separate `admin_users` table (see AdminUser).
         if extra_fields.get("is_staff") is not True:
             raise ValueError("Superuser must have is_staff=True.")
         if extra_fields.get("is_superuser") is not True:
@@ -82,7 +76,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     full_name = models.CharField(max_length=255, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
 
-    # 'customer' by default so a public sign-up can never create an owner.
+    # Customer-only. Real admins live in the `admin_users` table (AdminUser);
+    # authorization never relies on role == 'admin' here.
     role = models.CharField(
         max_length=20,
         choices=Role.choices,
@@ -119,6 +114,60 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_customer(self):
         return self.role == Role.CUSTOMER
 
+
+# ============================================================
+# AdminUser (separate table: admin_users)
+# ============================================================
+class AdminUserManager(BaseUserManager):
+    """Creates admin accounts with properly hashed passwords."""
+
+    use_in_migrations = True
+
+    def create_admin(self, username, email, password=None, **extra_fields):
+        if not username:
+            raise ValueError("A username is required.")
+        if not email:
+            raise ValueError("An email address is required.")
+        admin = self.model(
+            username=username, email=self.normalize_email(email), **extra_fields
+        )
+        admin.set_password(password)
+        admin.save(using=self._db)
+        return admin
+
+
+class AdminUser(AbstractBaseUser):
+    """
+    Food truck owner / order receiver. Stored ONLY in `admin_users`; the
+    admin login authenticates against this table and nothing else.
+    """
+
+    username = models.CharField(max_length=150, unique=True)
+    email = models.EmailField(max_length=254, unique=True)
+    full_name = models.CharField(max_length=255, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = AdminUserManager()
+
+    USERNAME_FIELD = "username"
+    REQUIRED_FIELDS = ["email"]
+
+    class Meta:
+        db_table = "admin_users"
+
+    def __str__(self):
+        return f"{self.username} (admin)"
+
+    @property
+    def role(self):
+        return "admin"
+
+    @property
+    def is_admin(self):
+        return True
 
 # ============================================================
 # Shared choices
@@ -358,7 +407,7 @@ class AdminOrderStatusLog(models.Model):
         Order, on_delete=models.CASCADE, related_name="admin_logs"
     )
     admin = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        "api.AdminUser",
         on_delete=models.SET_NULL,
         related_name="handled_order_logs",
         null=True,

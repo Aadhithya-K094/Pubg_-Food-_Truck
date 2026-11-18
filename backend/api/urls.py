@@ -3,7 +3,8 @@ API routes.
 
   Authentication (public)
     POST  /api/auth/register/        create a customer account
-    POST  /api/auth/login/           authenticate, returns JWT + role
+    POST  /api/auth/login/           CUSTOMER login (users table), returns JWT
+    POST  /api/auth/admin-login/     ADMIN login (admin_users table only), returns JWT
     POST  /api/auth/google/          OAuth "Sign in with Google"
     POST  /api/auth/refresh-token/   refresh the access token
 
@@ -22,8 +23,8 @@ API routes.
     POST  /api/reviews/              create a review
 
   Admin (owner only)
-    GET   /api/users/                        list users
-    POST  /api/users/                        create admin/customer
+    GET   /api/users/                        list customers (?role=admin lists admins)
+    POST  /api/users/                        create customer (role=admin -> admin_users)
     GET   /api/admin/orders/                 all orders (?service= / ?status=)
     POST  /api/admin/orders/<id>/action/     accept/reject/advance an order
     GET   /api/admin/dashboard/              order stats
@@ -32,9 +33,9 @@ API routes.
 """
 
 from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView
-
 from .views import (
+    AccountTokenRefreshView,
+    AdminLoginView,
     AdminUserListCreateView,
     GoogleLoginView,
     LoginView,
@@ -57,8 +58,9 @@ urlpatterns = [
     # --- Authentication (public) ---
     path("auth/register/", RegisterView.as_view(), name="register"),
     path("auth/login/", LoginView.as_view(), name="login"),
+    path("auth/admin-login/", AdminLoginView.as_view(), name="admin_login"),
     path("auth/google/", GoogleLoginView.as_view(), name="google_login"),
-    path("auth/refresh-token/", TokenRefreshView.as_view(), name="refresh_token"),
+    path("auth/refresh-token/", AccountTokenRefreshView.as_view(), name="refresh_token"),
     # --- Account (authenticated) ---
     path("auth/profile/", MeView.as_view(), name="profile"),
     # --- Menu (public) ---

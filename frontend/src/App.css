@@ -93,8 +93,8 @@ body {
   z-index: 0;
 }
 
-/* Login background: blank until the username field is focused, then it
-   fades in slowly over ~2s (the .revealed class is toggled in Login.js).
+/* Login background: blank until the user clicks/taps anywhere on the login
+   page, then it fades in slowly over ~2s (.revealed is toggled in Login.js).
    It should read as a NORMAL background photo, so we drop the heavy blur
    and edge-feather mask used elsewhere and only keep a light dim. */
 .screen-bg {
@@ -3642,3 +3642,67 @@ img {
 .order-fab.has-order {
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(76, 175, 80, 0.3);
 }
+
+/* ---- shared toast additions + confirm dialog ---- */
+.toast-info {
+  border-left: 4px solid #4aa3ff;
+}
+.toast-info .toast-icon {
+  background: #4aa3ff;
+}
+.toast-msg {
+  white-space: pre-line;
+}
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+}
+.confirm-dialog {
+  width: min(380px, 100%);
+  padding: 20px;
+  border-radius: 14px;
+  background: rgba(24, 28, 35, 0.98);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+  color: var(--text-on-glass);
+}
+.confirm-message {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.confirm-btn {
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.confirm-btn.ghost {
+  background: transparent;
+  color: var(--text-on-glass);
+}
+.confirm-btn.danger {
+  background: var(--pubg-yellow);
+  border-color: var(--pubg-yellow);
+  color: #111;
+}
+.tracker-status-msg {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pubg-yellow);
+}

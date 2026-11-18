@@ -1,30 +1,38 @@
 """
-Auth API views: register, login, current-user profile, and admin-only
-user management.
+Auth API views: register, customer login, admin login, current-user
+profile, and admin-only user management.
 
-Roles:
-  * admin    -> food truck owner / order receiver (main user)
-  * customer -> ordering customer (secondary user)
+Accounts live in two separate tables:
+  * admin_users -> food truck owner / order receiver (AdminUser)
+  * users       -> ordering customers (User, role='customer')
 
-Login uses Django's `authenticate` (constant-time hash comparison) and
-issues JWT access/refresh tokens on success.
+/api/auth/login/ authenticates customers only; /api/auth/admin-login/
+authenticates against admin_users only. Both issue JWT access/refresh
+tokens carrying a `user_type` claim.
 """
 
 import os
 import secrets
 
 from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth.hashers import check_password, make_password
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenRefreshView
 
-from .models import Role
+from .authentication import AccountTokenRefreshSerializer
+from .authentication import tokens_for as _tokens_for
+from .models import AdminUser, Role
 from .permissions import IsAdminRole
 from .serializers import (
+    AdminCreateAdminSerializer,
     AdminCreateUserSerializer,
+    AdminLoginSerializer,
+    AdminUserSerializer,
     LoginSerializer,
     RegisterSerializer,
     UserSerializer,
@@ -32,17 +40,14 @@ from .serializers import (
 
 User = get_user_model()
 
+# Hash used to equalize timing when an admin login names an unknown account.
+_DUMMY_HASH = make_password("not-a-real-password")
 
-def _tokens_for(user):
-    """Build a JWT access/refresh pair, embedding the role in the token."""
-    refresh = RefreshToken.for_user(user)
-    refresh["role"] = user.role
-    access = refresh.access_token
-    access["role"] = user.role
-    return {
-        "access": str(access),
-        "refresh": str(refresh),
-    }
+
+class AccountTokenRefreshView(TokenRefreshView):
+    """POST /api/auth/refresh-token/ — refresh keeping the account type."""
+
+    serializer_class = AccountTokenRefreshSerializer
 
 
 class RegisterView(APIView):
@@ -71,8 +76,8 @@ class RegisterView(APIView):
 class LoginView(APIView):
     """
     POST /api/auth/login/
-    Authenticate and return JWT tokens plus the user's role so the
-    client can show the right portal (admin vs customer).
+    CUSTOMER login (users table only). Admin accounts live in
+    admin_users and must use /api/auth/admin-login/.
     """
 
     permission_classes = [AllowAny]
@@ -80,6 +85,12 @@ class LoginView(APIView):
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        if serializer.validated_data.get("expected_role") == Role.ADMIN:
+            return Response(
+                {"detail": "Use the admin login."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         identifier = serializer.validated_data["username"].strip()
         password = serializer.validated_data["password"]
@@ -92,14 +103,12 @@ class LoginView(APIView):
             match = User.objects.filter(email__iexact=identifier).first()
             if match:
                 lookup_username = match.username
-        else:
-            # also allow the case where someone typed an email that is
-            # stored but doesn't contain '@' check (defensive no-op)
-            pass
 
         user = authenticate(request, username=lookup_username, password=password)
 
-        if user is None:
+        # Only genuine customers may log in here. A legacy users row with a
+        # non-customer role is treated like any other bad credential.
+        if user is None or user.role != Role.CUSTOMER:
             # Generic message: don't reveal whether the account exists.
             return Response(
                 {"detail": "Invalid credentials."},
@@ -112,19 +121,63 @@ class LoginView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # If the client said which portal it is, enforce the role match.
-        expected_role = serializer.validated_data.get("expected_role")
-        if expected_role and user.role != expected_role:
-            label = "Admin" if expected_role == Role.ADMIN else "Customer"
-            return Response(
-                {"detail": f"This account is not registered as a {label}."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
         return Response(
             {
                 "user": UserSerializer(user).data,
                 "tokens": _tokens_for(user),
+                "message": "Login successful.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class AdminLoginView(APIView):
+    """
+    POST /api/auth/admin-login/
+    ADMIN login. Authenticates ONLY against the admin_users table, by
+    username or email. Customer credentials never match here.
+    """
+
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = AdminLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        identifier = serializer.validated_data["username"].strip()
+        password = serializer.validated_data["password"]
+
+        if "@" in identifier:
+            admin = AdminUser.objects.filter(email__iexact=identifier).first()
+        else:
+            admin = AdminUser.objects.filter(username=identifier).first()
+
+        if admin is None:
+            check_password(password, _DUMMY_HASH)  # equalize timing
+            return Response(
+                {"detail": "Invalid credentials."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not admin.check_password(password):
+            return Response(
+                {"detail": "Invalid credentials."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not admin.is_active:
+            return Response(
+                {"detail": "This account is disabled."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        admin.last_login = timezone.now()
+        admin.save(update_fields=["last_login"])
+
+        return Response(
+            {
+                "user": AdminUserSerializer(admin).data,
+                "tokens": _tokens_for(admin),
                 "message": "Login successful.",
             },
             status=status.HTTP_200_OK,
@@ -188,6 +241,11 @@ class GoogleLoginView(APIView):
 
         # Find-or-create the account by email. New Google users are customers.
         user = User.objects.filter(email__iexact=email).first()
+        if user is not None and user.role != Role.CUSTOMER:
+            return Response(
+                {"detail": "This account cannot sign in with Google."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         if user is None:
             base = email.split("@")[0]
             username = "".join(ch for ch in base if ch.isalnum())[:20] or "user"
@@ -221,31 +279,47 @@ class GoogleLoginView(APIView):
 
 
 class MeView(APIView):
-    """GET /api/auth/profile/ — return the authenticated user's profile + role."""
+    """GET /api/auth/profile/ — return the authenticated account's profile + role."""
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        if isinstance(request.user, AdminUser):
+            return Response(AdminUserSerializer(request.user).data)
         return Response(UserSerializer(request.user).data)
 
 
 class AdminUserListCreateView(APIView):
     """
     Admin-only user management.
-      GET  /api/users/  -> list all users
-      POST /api/users/  -> create an admin or customer account
+      GET  /api/users/              -> list customers (users table)
+      GET  /api/users/?role=admin   -> list admins (admin_users table)
+      POST /api/users/              -> create a customer (default) or,
+                                       with role=admin, an admin_users row
     """
 
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        role = request.query_params.get("role")
-        users = User.objects.all().order_by("-date_joined")
-        if role in dict(Role.choices):
-            users = users.filter(role=role)
+        if request.query_params.get("role") == Role.ADMIN:
+            admins = AdminUser.objects.all().order_by("-created_at")
+            return Response(AdminUserSerializer(admins, many=True).data)
+        users = User.objects.filter(role=Role.CUSTOMER).order_by("-date_joined")
         return Response(UserSerializer(users, many=True).data)
 
     def post(self, request):
+        if request.data.get("role") == Role.ADMIN:
+            serializer = AdminCreateAdminSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            admin = serializer.save()
+            return Response(
+                {
+                    "user": AdminUserSerializer(admin).data,
+                    "message": "Admin account created.",
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
         serializer = AdminCreateUserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()

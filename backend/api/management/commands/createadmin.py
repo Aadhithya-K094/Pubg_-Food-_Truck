@@ -1,8 +1,9 @@
 """
 Create an ADMIN (food truck owner / order receiver) account.
 
-Admin accounts are intentionally NOT creatable through the public
-sign-up API, so use this command to provision the owner:
+Admins live in their own `admin_users` table and are intentionally NOT
+creatable through the public sign-up API, so use this command to provision
+the owner:
 
     python manage.py createadmin
 
@@ -12,12 +13,11 @@ The password is validated and stored as a one-way hash.
 
 from getpass import getpass
 
-from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand, CommandError
 
-User = get_user_model()
+from api.models import AdminUser
 
 
 class Command(BaseCommand):
@@ -36,10 +36,10 @@ class Command(BaseCommand):
         if not username or not email:
             raise CommandError("Username and email are required.")
 
-        if User.objects.filter(username=username).exists():
-            raise CommandError(f"A user named '{username}' already exists.")
-        if User.objects.filter(email=email).exists():
-            raise CommandError(f"A user with email '{email}' already exists.")
+        if AdminUser.objects.filter(username=username).exists():
+            raise CommandError(f"An admin named '{username}' already exists.")
+        if AdminUser.objects.filter(email=email).exists():
+            raise CommandError(f"An admin with email '{email}' already exists.")
 
         password = getpass("Password: ")
         confirm = getpass("Password (again): ")
@@ -52,7 +52,7 @@ class Command(BaseCommand):
         except ValidationError as exc:
             raise CommandError("\n".join(exc.messages)) from exc
 
-        user = User.objects.create_admin(
+        user = AdminUser.objects.create_admin(
             username=username,
             email=email,
             password=password,
@@ -62,6 +62,6 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Admin (owner) account created: {user.username} <{user.email}>"
+                f"Admin (owner) account created in admin_users: {user.username} <{user.email}>"
             )
         )
