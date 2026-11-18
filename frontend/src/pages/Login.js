@@ -120,7 +120,7 @@ export default function Login() {
       text: "signin_with",
       width: 300,
     });
-  }, [portal, mode]);
+  }, [portal, mode, showToast]);
 
   // Prevent the browser from leaving saved/autofilled credentials in the
   // fields when the page is freshly opened. Autofill can fire a moment
@@ -370,26 +370,7 @@ export default function Login() {
         aria-hidden="true"
       />
 
-      {/* Side-popup toast for alerts */}
-      {toast && (
-        <div className={`toast toast-${toast.type}`} role="alert">
-          <span className="toast-icon" aria-hidden="true">
-            {toast.type === "success" ? "✓" : "!"}
-          </span>
-          <div className="toast-body">
-            <strong className="toast-title">{toast.title}</strong>
-            <span className="toast-msg">{toast.message}</span>
-          </div>
-          <button
-            type="button"
-            className="toast-close"
-            onClick={() => setToast(null)}
-            aria-label="Dismiss"
-          >
-            ×
-          </button>
-        </div>
-      )}
+      {/* Alerts are shown by the shared <ToastProvider> (components/Toast.js). */}
 
       <div className={`auth-card ${isRegister ? "is-register" : ""}`}>
         <div className="auth-brand">
